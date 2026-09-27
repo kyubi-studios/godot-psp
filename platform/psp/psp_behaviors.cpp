@@ -15,6 +15,8 @@ void PSPBehaviors::_scan(Node *p_node) {
 		if (kind == "spinner") {
 			Vector3 deg = n3d->get_meta("spin_speed", Vector3(0, 90, 0));
 			spinners.push_back({ n3d->get_instance_id(), Vector3(Math::deg_to_rad(deg.x), Math::deg_to_rad(deg.y), Math::deg_to_rad(deg.z)) });
+		} else if (kind == "orbit_camera" && !Object::cast_to<Camera3D>(n3d)) {
+			WARN_PRINT(vformat("PSP: psp_behavior \"orbit_camera\" requires a Camera3D (node %s); ignored.", n3d->get_name()));
 		} else if (kind == "orbit_camera") {
 			OrbitCamera oc;
 			oc.node = n3d->get_instance_id();

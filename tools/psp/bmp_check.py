@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Kullanım: bmp_check.py <in.bmp> <out.png> [--nonblack X,Y ...] [--rgb X,Y,R,G,B,TOL ...]
-   [--brighter X1,Y1,X2,Y2,MINDIFF ...]  (X1,Y1 parlaklığı X2,Y2'den en az MINDIFF fazla)"""
+   [--brighter X1,Y1,X2,Y2,MINDIFF ...]  (X1,Y1 parlaklığı X2,Y2'den en az MINDIFF fazla)
+   [--chgt X,Y,A,B,MINDIFF ...]  (X,Y pikselinde kanal A (0=R,1=G,2=B) kanal B'den en az MINDIFF büyük)"""
 import sys
 from PIL import Image
 
@@ -28,5 +29,10 @@ while i < len(checks):
         a, b = img.getpixel((x1, y1)), img.getpixel((x2, y2))
         if lum(a) - lum(b) < d:
             print(f"[bmp_check] FAIL brighter {x1},{y1}={a} vs {x2},{y2}={b} (need +{d})"); ok = False
+    elif kind == "--chgt":
+        x, y, a, b, d = map(int, arg.split(","))
+        px = img.getpixel((x, y))
+        if px[a] - px[b] < d:
+            print(f"[bmp_check] FAIL chgt pixel {x},{y}={px}: ch{a} - ch{b} < {d}"); ok = False
 print("[bmp_check] OK" if ok else "[bmp_check] FAILED")
 sys.exit(0 if ok else 1)

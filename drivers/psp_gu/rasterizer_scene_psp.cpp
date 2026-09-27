@@ -327,7 +327,13 @@ void RasterizerScenePSP::_draw_item(const DrawItem &p_item) {
 	sceGuColor(PSPGU::color_to_abgr(albedo.r, albedo.g, albedo.b, albedo.a));
 
 	const bool has_vertex_color = (surf.vertex_type & GU_COLOR_8888) != 0;
-	if (flags & SHADER_UNSHADED) {
+	bool unshaded = (flags & SHADER_UNSHADED) != 0;
+	if (!unshaded && !(surf.vertex_type & GU_NORMAL_8BIT)) {
+		// Normali olmayan yüzey GE'de tanımsız ışıklanır; ışıksız (albedo) çiz.
+		WARN_PRINT_ONCE("PSP: a lit surface has no normals; it is drawn unshaded.");
+		unshaded = true;
+	}
+	if (unshaded) {
 		if (has_vertex_color && !(flags & SHADER_VERTEX_COLOR)) {
 			// Işıksız modda GE rengi vertex renginden alır; materyal vertex rengini kullanmıyorsa albedo'yu
 			// "ışıklı, ışıksız, beyaz ambient" ile çıkar: renk = ambient(beyaz) * materyal ambient(albedo).

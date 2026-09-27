@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Faz 1 test paketi: hello, boot, temiz çıkış + vsync + peak bellek, self-test.
+# PSP test paketi: hello, açılış, temiz çıkış + vsync + peak bellek, self-test, renderer sahneleri, demo.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 source tools/psp/env.sh
@@ -47,6 +47,17 @@ psp_scene_test stress_draws 60 70 --nonblack 176,100 --nonblack 303,172
 grep -qE '\[PSP\] frame 60 .*draws=900$' bin/psp_tests/stress_draws/test.log && echo "[psp_tests] stress draws=900 PASS" || { echo "[psp_tests] stress draws FAIL"; rc=1; }
 # ~196k indeksli küre (tek çizimde > 65535): alt/üst kutuplar dahil tamamı kırmızı.
 psp_scene_test big_sphere 30 40 --rgb 240,136,255,0,0,24 --rgb 240,117,255,0,0,24 --rgb 240,155,255,0,0,24 --rgb 5,5,0,0,255,16
+# Sağlamlaştırma (inceleme test boşlukları):
+# 16x16 swizzle'lı texture + uv1_offset.x=0.5: sol üst yeşil, sağ üst kırmızı, sol alt sarı.
+psp_scene_test tex_swizzle 30 40 --rgb 210,106,0,255,0,24 --rgb 270,106,255,0,0,24 --rgb 210,166,255,255,0,24
+# Kamera +X'te -X'e bakıyor, ışık +X'ten: kameraya bakan yüz aydınlık (ışıklar dünya uzayında).
+psp_scene_test lit_rotated_cam 30 40 --brighter 240,136,5,5,150
+# 6 omni ışık: yakın güçlü yeşil ışık en iyi 4'te olmalı → yeşil baskın.
+psp_scene_test many_lights 30 40 --chgt 240,136,1,0,40
+# ShaderMaterial (desteklenmiyor): çökmeden beyaz çizilir.
+psp_scene_test shader_material 30 40 --rgb 240,136,255,255,255,24
+# Yalnızca pozisyonlu mesh + ışıklı materyal: normal yok → ışıksız (albedo sarı) çizilir.
+psp_scene_test position_only 30 40 --rgb 240,150,255,255,0,24 --rgb 5,5,0,0,255,16
 # 3D demo (../psp_demo3d, Godot 4.7 editörüyle export edilen game.pck).
 DEMO="$(cd .. && pwd)/psp_demo3d"
 if [ -d "$DEMO" ]; then

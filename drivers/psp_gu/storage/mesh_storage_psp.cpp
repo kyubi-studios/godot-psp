@@ -9,8 +9,9 @@
 using namespace RendererPSP;
 
 static inline int16_t _to_s16(float p_v) {
-	int v = (int)Math::round(p_v * 32767.0f);
-	return (int16_t)CLAMP(v, -32767, 32767);
+	// GE 16-bit pozisyonu /32768 ile çözer.
+	int v = (int)Math::round(p_v * 32768.0f);
+	return (int16_t)CLAMP(v, -32768, 32767);
 }
 
 static inline int8_t _to_s8(float p_v) {

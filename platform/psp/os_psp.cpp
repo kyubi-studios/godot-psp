@@ -59,7 +59,7 @@ void OS_PSP::run() {
 	main_loop->initialize();
 	int frame = 0;
 	PSPBehaviors behaviors;
-	const bool show_stats = GLOBAL_GET("psp/show_stats").booleanize();
+	const bool show_stats = GLOBAL_DEF("psp/show_stats", false).booleanize();
 	uint64_t last_ticks = get_ticks_usec();
 	uint64_t stats_ticks = last_ticks;
 	while (true) {

@@ -54,3 +54,6 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | drivers/psp_gu/storage/mesh_storage_psp.cpp | Normal `normalize(n / pos_half)` olarak depolanır; `draw_chunk_size` ile >65535 çizim parçalanır | Küp olmayan AABB'de normal bozuluyordu (I1); prim sayı alanı 16 bit (I3) |
 | drivers/psp_gu/rasterizer_scene_psp.cpp | Unshaded + vertex rengi (materyal kullanmıyorsa): ışıklı/ışıksız/beyaz ambient ile albedo | GE ışıksız modda vertex rengini kullanır (I2) |
 | drivers/psp_gu/psp_texture.cpp | Mipmap'li görüntüde hedefe yeten en küçük seviye ayrılır, sonra açılır | Büyük texture'da tam boyut açılması (I4) |
+| drivers/psp_gu/rasterizer_scene_psp.cpp | Normali olmayan ışıklı yüzey → ışıksız (albedo) + tek seferlik uyarı | GE'de tanımsız ışıklanma (inceleme M3) |
+| platform/psp/os_psp.cpp, psp_behaviors.cpp, mesh_storage_psp.cpp | `GLOBAL_DEF("psp/show_stats")`; kamera olmayan orbit_camera uyarı ile atlanır; s16 ×32768 | İnceleme M1/M5/M8 |
+| tests/psp/projects/{tex_swizzle,lit_rotated_cam,many_lights,shader_material,position_only} | Swizzle'lı texture + UV offset, döndürülmüş kamera ışığı, >4 ışık, ShaderMaterial, pozisyon-only mesh | İnceleme test boşlukları |
