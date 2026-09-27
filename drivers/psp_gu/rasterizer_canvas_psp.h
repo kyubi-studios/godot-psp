@@ -30,6 +30,8 @@ class RasterizerCanvasPSP : public RasterizerCanvasDummy {
 		const void *bound_texture = nullptr;
 		int filter = 0; // GU_NEAREST / GU_LINEAR
 		bool repeat = false;
+		int sent_filter = -1; // GE'ye son gönderilen (gereksiz komutları önler)
+		int sent_repeat = -1;
 		// Bağlı texture'ın texel ölçeği (kaynak piksel → dönüştürülmüş texture texel'i) ve kaynak boyutu.
 		Vector2 texel_scale;
 		Vector2 source_size;
@@ -43,6 +45,8 @@ class RasterizerCanvasPSP : public RasterizerCanvasDummy {
 	void _draw_polygon(DrawState &p_state, const Item::CommandPolygon *p_poly);
 	void _draw_primitive(DrawState &p_state, const Item::CommandPrimitive *p_prim);
 	void _draw_mesh(DrawState &p_state, const Item::CommandMesh *p_mesh);
+	// Display list'e sığacak parçalar halinde through-mode çizim (büyük poligonlar/çizgiler).
+	void _draw_vertices(int p_prim, const Vertex2D *p_src, int p_count);
 	bool mesh_mode = false; // GE 3D yolu (ortografik) ayarlandı mı
 
 public:

@@ -62,3 +62,5 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | platform/psp/detect.py | `module_text_server_fb_enabled`, `module_freetype_enabled`, `brotli=True` | Label yazıları; gömülü font WOFF2 (Brotli). ELF +1.4 MB |
 | drivers/psp_gu/psp_gu.cpp (texture_address) | Texture VRAM önbelleği (~1.2 MB, LRU, first-fit, bu karede kullanılanlar atılmaz; mutlak 0x04000000 adresi) | GE VRAM'den çok daha hızlı okur |
 | platform/psp/detect.py | `module_gdscript_enabled=True` | GDScript (+0.9 MB kod); demo `bob.gd` ile export yolu test edilir |
+| drivers/psp_gu/rasterizer_canvas_psp.cpp | `final_transform`/`final_clip_rect` doğrudan (canvas dönüşümü zaten dahil); `sceGuScissor(x,y,w,h)`; CLIP_IGNORE geri yükleme; büyük poligonlar parçalı (şerit sürekliliği korunur); vertex renkli 2D mesh modulate'i ambient hilesiyle; filtre/wrap yalnızca değişince | 3. inceleme C1/C2/I1/I2/I3/I5 |
+| drivers/psp_gu/psp_gu.cpp | `texture_forget` kare içinde, bu karede kullanılan VRAM alanını kare sonuna kadar tutar | 3. inceleme I4 |

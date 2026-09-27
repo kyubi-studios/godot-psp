@@ -63,6 +63,12 @@ psp_scene_test position_only 30 40 --rgb 240,150,255,255,0,24 --rgb 5,5,0,0,255,
 # 2D canvas: ColorRect (20..120, 20..70) kırmızı; 64x64 dama Sprite2D merkez (300,150): sol üst beyaz, sağ üst siyah;
 # yeşil Polygon2D üçgen; arka plan varsayılan temizleme rengi (0,0,0.5).
 psp_scene_test canvas_basic 30 40 --rgb 70,45,255,0,0,16 --rgb 284,134,255,255,255,16 --rgb 316,134,0,0,0,16 --rgb 90,230,0,255,0,16 --rgb 450,250,0,0,128,16
+# 2D inceleme düzeltmeleri: Camera2D (kırmızı dünya x=400..440 → ekran 300..340), sıfır olmayan orijinli kırpma,
+# modulate'li vertex renkli MeshInstance2D (yeşil * 0.5), 3000 noktalı Line2D (display list'e sığmayan poligon).
+psp_scene_test cam2d 30 40 --rgb 320,136,255,0,0,16 --region-lacks 380,100,460,170,255,0,0,40
+psp_scene_test clip2d 30 40 --rgb 150,125,255,0,0,16 --region-lacks 202,100,300,150,255,0,0,40 --region-lacks 100,152,200,200,255,0,0,40 --region-lacks 0,0,98,98,255,0,0,40
+psp_scene_test mesh2d_modulate 30 40 --rgb 240,140,0,128,0,24
+psp_scene_test long_line 30 40 --region-has 20,40,460,60,0,255,0,40 --region-has 20,200,460,230,0,255,0,40
 # Label (FreeType + varsayılan font): yazı bölgesinde beyaz var; 64 pt "WWW" gerçek gliflerle ~180 px genişlikte (onaltılık kod kutuları çok daha dar).
 psp_scene_test label 30 40 --region-has 20,20,300,80,255,255,255,40 --region-has 150,160,200,250,255,255,255,60 --region-lacks 20,90,460,145,255,255,255,40
 # GDScript: _ready (lambda/map/reduce) ve _process ile kutuyu hareket ettirir (30. karede x = 20 + 30*4 = 140).

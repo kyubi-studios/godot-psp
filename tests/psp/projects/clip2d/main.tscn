@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Clip" type="Control" parent="."]
+clip_contents = true
+layout_mode = 0
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 200.0
+offset_bottom = 150.0
+
+[node name="Big" type="ColorRect" parent="Clip"]
+layout_mode = 0
+offset_left = -100.0
+offset_top = -100.0
+offset_right = 380.0
+offset_bottom = 172.0
+color = Color(1, 0, 0, 1)

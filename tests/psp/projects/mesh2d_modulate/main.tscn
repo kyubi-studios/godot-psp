@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://colored_tri.tres" id="1_tri"]
+
+[node name="Main" type="Node2D"]
+
+[node name="Tri" type="MeshInstance2D" parent="."]
+modulate = Color(0.5, 0.5, 0.5, 1)
+position = Vector2(240, 136)
+scale = Vector2(100, 100)
+mesh = ExtResource("1_tri")

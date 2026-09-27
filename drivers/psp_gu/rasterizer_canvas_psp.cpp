@@ -61,8 +61,14 @@ bool RasterizerCanvasPSP::_bind_texture(RID p_texture, DrawState &r_state) {
 		sceGuTexFlush();
 		r_state.bound_texture = td.pixels;
 	}
-	sceGuTexFilter(r_state.filter, r_state.filter);
-	sceGuTexWrap(r_state.repeat ? GU_REPEAT : GU_CLAMP, r_state.repeat ? GU_REPEAT : GU_CLAMP);
+	if (r_state.sent_filter != r_state.filter) {
+		sceGuTexFilter(r_state.filter, r_state.filter);
+		r_state.sent_filter = r_state.filter;
+	}
+	if (r_state.sent_repeat != (int)r_state.repeat) {
+		sceGuTexWrap(r_state.repeat ? GU_REPEAT : GU_CLAMP, r_state.repeat ? GU_REPEAT : GU_CLAMP);
+		r_state.sent_repeat = (int)r_state.repeat;
+	}
 	r_state.texel_scale = Vector2((float)td.width / MAX(td.source_width, 1), (float)td.height / MAX(td.source_height, 1));
 	r_state.source_size = Vector2(td.source_width, td.source_height);
 	if (!r_state.textured) {
@@ -170,25 +176,6 @@ void RasterizerCanvasPSP::_draw_polygon(DrawState &p_state, const Item::CommandP
 	// UV'ler normalize (0..1) → kaynak piksel → texel.
 	const Vector2 uv_scale = p_state.source_size;
 
-	Vertex2D *v = (Vertex2D *)PSPGU::frame_alloc(sizeof(Vertex2D) * count);
-	const int *idx = pd->indices.ptr();
-	for (int i = 0; i < count; i++) {
-		const int k = idx[i];
-		if (k < 0 || k >= npoints) {
-			continue;
-		}
-		const Vector2 p = p_state.xform.xform(pd->points[k]);
-		v[i].x = p.x;
-		v[i].y = p.y;
-		v[i].z = 0.0f;
-		if (has_uv) {
-			v[i].u = pd->uvs[k].x * uv_scale.x * p_state.texel_scale.x;
-			v[i].v = pd->uvs[k].y * uv_scale.y * p_state.texel_scale.y;
-		} else {
-			v[i].u = v[i].v = 0.0f;
-		}
-		v[i].color = _abgr(p_state.modulate * (per_vertex_color ? pd->colors[k] : single));
-	}
 	int prim = GU_TRIANGLES;
 	switch (p_poly->primitive) {
 		case RSE::PRIMITIVE_POINTS:
@@ -206,8 +193,58 @@ void RasterizerCanvasPSP::_draw_polygon(DrawState &p_state, const Item::CommandP
 		default:
 			break;
 	}
-	sceGuDrawArray(prim, VERTEX_2D_FORMAT, count, nullptr, v);
+	// Vertex'ler parça parça üretilip display list'e yazılır (büyük poligonlar tek seferde sığmaz).
+	const int *idx = pd->indices.ptr();
+	const int max_chunk = 1200;
+	static LocalVector<Vertex2D> tmp; // kareler arası yeniden kullanılır (her çizimde ayırma yok)
+	if (tmp.size() < (uint32_t)MIN(count, max_chunk)) {
+		tmp.resize(MIN(count, max_chunk));
+	}
+	int start = 0;
+	while (start < count) {
+		int n = MIN(max_chunk, count - start);
+		if (prim == GU_TRIANGLES && n < count - start) {
+			n -= n % 3;
+		} else if (prim == GU_LINES && n < count - start) {
+			n -= n % 2;
+		}
+		for (int i = 0; i < n; i++) {
+			const int k = idx[start + i];
+			Vertex2D &vv = tmp[i];
+			if (k < 0 || k >= npoints) {
+				vv = Vertex2D{ 0, 0, 0, 0, 0, 0 };
+				continue;
+			}
+			const Vector2 p = p_state.xform.xform(pd->points[k]);
+			vv.x = p.x;
+			vv.y = p.y;
+			vv.z = 0.0f;
+			if (has_uv) {
+				vv.u = pd->uvs[k].x * uv_scale.x * p_state.texel_scale.x;
+				vv.v = pd->uvs[k].y * uv_scale.y * p_state.texel_scale.y;
+			} else {
+				vv.u = vv.v = 0.0f;
+			}
+			vv.color = _abgr(p_state.modulate * (per_vertex_color ? pd->colors[k] : single));
+		}
+		_draw_vertices(prim, tmp.ptr(), n);
+		if (start + n >= count) {
+			break;
+		}
+		// Şeritler: süreklilik için son vertex(ler) tekrar edilir (üçgen şeridinde parite korunur).
+		const int overlap = prim == GU_TRIANGLE_STRIP ? 2 : (prim == GU_LINE_STRIP ? 1 : 0);
+		if (prim == GU_TRIANGLE_STRIP && (n % 2) != 0) {
+			n--; // çift sayıda ilerle: sarım yönü değişmesin
+		}
+		start += n - overlap;
+	}
 	PSPGU::stats.draws_accum++;
+}
+
+void RasterizerCanvasPSP::_draw_vertices(int p_prim, const Vertex2D *p_src, int p_count) {
+	Vertex2D *v = (Vertex2D *)PSPGU::frame_alloc(sizeof(Vertex2D) * p_count);
+	memcpy(v, p_src, sizeof(Vertex2D) * p_count);
+	sceGuDrawArray(p_prim, VERTEX_2D_FORMAT, p_count, nullptr, v);
 }
 
 void RasterizerCanvasPSP::_draw_primitive(DrawState &p_state, const Item::CommandPrimitive *p_prim) {
@@ -268,8 +305,18 @@ void RasterizerCanvasPSP::_draw_mesh(DrawState &p_state, const Item::CommandMesh
 			{ model.origin.x, model.origin.y, model.origin.z, 1 },
 		};
 		sceGuSetMatrix(GU_MODEL, &m);
-		// Vertex rengi yoksa GE rengi materyal renginden alır.
+		// Vertex rengi yoksa GE rengi materyal renginden (sceGuColor) alır. Vertex rengi varsa ışıksız modda
+		// sceGuColor yok sayılır: modulate için "ışıklı, ışıksız, ambient = modulate, materyal ambient = vertex rengi".
 		sceGuColor(_abgr(color));
+		const bool modulate_vertex_color = (surf.vertex_type & GU_COLOR_8888) && color != Color(1, 1, 1, 1);
+		if (modulate_vertex_color) {
+			sceGuEnable(GU_LIGHTING);
+			for (int l = 0; l < 4; l++) {
+				sceGuDisable(GU_LIGHT0 + l);
+			}
+			sceGuAmbient(_abgr(color));
+			sceGuColorMaterial(GU_AMBIENT);
+		}
 		const bool textured = (surf.vertex_type & GU_TEXTURE_16BIT) && _bind_texture(p_mesh->texture, p_state);
 		if (textured) {
 			sceGuTexScale(surf.uv_range.x * 0.5f, surf.uv_range.y * 0.5f);
@@ -287,6 +334,10 @@ void RasterizerCanvasPSP::_draw_mesh(DrawState &p_state, const Item::CommandMesh
 			} else {
 				sceGuDrawArray(surf.primitive, surf.vertex_type | GU_TRANSFORM_3D, n, nullptr, (const uint8_t *)surf.vertices + (size_t)start * surf.stride);
 			}
+		}
+		if (modulate_vertex_color) {
+			sceGuDisable(GU_LIGHTING);
+			sceGuColorMaterial(0);
 		}
 		PSPGU::stats.draws_accum++;
 	}
@@ -320,20 +371,32 @@ void RasterizerCanvasPSP::canvas_render_items(RID p_to_render_target, Item *p_it
 	mesh_mode = false;
 	for (Item *ci = p_item_list; ci; ci = ci->next) {
 		state.modulate = p_modulate * ci->final_modulate;
-		const Transform2D base_xform = p_canvas_transform * ci->final_transform;
+		// final_transform canvas dönüşümünü zaten içerir (render target pikseli); tekrar çarpılmaz.
+		const Transform2D base_xform = ci->final_transform;
 		state.xform = base_xform;
 		const RSE::CanvasItemTextureFilter filter = ci->texture_filter == RSE::CANVAS_ITEM_TEXTURE_FILTER_DEFAULT ? p_default_filter : ci->texture_filter;
 		state.filter = (filter == RSE::CANVAS_ITEM_TEXTURE_FILTER_NEAREST || filter == RSE::CANVAS_ITEM_TEXTURE_FILTER_NEAREST_WITH_MIPMAPS) ? GU_NEAREST : GU_LINEAR;
 		const RSE::CanvasItemTextureRepeat repeat = ci->texture_repeat == RSE::CANVAS_ITEM_TEXTURE_REPEAT_DEFAULT ? p_default_repeat : ci->texture_repeat;
 		state.repeat = repeat == RSE::CANVAS_ITEM_TEXTURE_REPEAT_ENABLED || repeat == RSE::CANVAS_ITEM_TEXTURE_REPEAT_MIRROR;
 
-		// Kırpma (Control clip_contents vb.).
-		bool want_clip = ci->final_clip_owner != nullptr;
+		// Kırpma (Control clip_contents vb.). final_clip_rect render target pikselindedir.
+		// sceGuScissor(x, y, genişlik, yükseklik) alır.
+		int clip[4] = { 0, 0, PSPGU::SCREEN_W, PSPGU::SCREEN_H };
+		const bool want_clip = ci->final_clip_owner != nullptr;
 		if (want_clip) {
-			const Rect2 r = p_canvas_transform.xform(ci->final_clip_owner->final_clip_rect);
-			const int x0 = CLAMP((int)r.position.x, 0, PSPGU::SCREEN_W), y0 = CLAMP((int)r.position.y, 0, PSPGU::SCREEN_H);
-			const int x1 = CLAMP((int)(r.position.x + r.size.x), 0, PSPGU::SCREEN_W), y1 = CLAMP((int)(r.position.y + r.size.y), 0, PSPGU::SCREEN_H);
-			sceGuScissor(x0, y0, x1, y1);
+			const Rect2 r = ci->final_clip_owner->final_clip_rect;
+			const int x0 = CLAMP((int)Math::floor(r.position.x), 0, PSPGU::SCREEN_W);
+			const int y0 = CLAMP((int)Math::floor(r.position.y), 0, PSPGU::SCREEN_H);
+			const int x1 = CLAMP((int)Math::ceil(r.position.x + r.size.x), 0, PSPGU::SCREEN_W);
+			const int y1 = CLAMP((int)Math::ceil(r.position.y + r.size.y), 0, PSPGU::SCREEN_H);
+			if (x1 <= x0 || y1 <= y0) {
+				continue; // tamamen kırpılmış
+			}
+			clip[0] = x0;
+			clip[1] = y0;
+			clip[2] = x1 - x0;
+			clip[3] = y1 - y0;
+			sceGuScissor(clip[0], clip[1], clip[2], clip[3]);
 			scissor_active = true;
 		} else if (scissor_active) {
 			sceGuScissor(0, 0, PSPGU::SCREEN_W, PSPGU::SCREEN_H);
@@ -361,8 +424,11 @@ void RasterizerCanvasPSP::canvas_render_items(RID p_to_render_target, Item *p_it
 					state.xform = base_xform * static_cast<const Item::CommandTransform *>(c)->xform;
 					break;
 				case Item::Command::TYPE_CLIP_IGNORE:
+					// ignore=true: kırpmayı kaldır; ignore=false: item'ın kendi kırpmasını geri yükle.
 					if (static_cast<const Item::CommandClipIgnore *>(c)->ignore) {
 						sceGuScissor(0, 0, PSPGU::SCREEN_W, PSPGU::SCREEN_H);
+					} else {
+						sceGuScissor(clip[0], clip[1], clip[2], clip[3]);
 					}
 					break;
 				default:

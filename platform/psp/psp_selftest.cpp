@@ -187,8 +187,12 @@ int psp_selftest() {
 
 	// Texture VRAM önbelleği: LRU, bu karede kullanılanlar atılmaz (GE okuyor olabilir).
 	{
-		static uint8_t blocks[5][16];
 		const uint32_t sz = 300 * 1024; // 4 tanesi ~1.2 MB boş VRAM'e sığar
+		uint8_t *blocks[5];
+		for (int i = 0; i < 5; i++) {
+			blocks[i] = (uint8_t *)malloc(sz); // texture_address sz byte kopyalar
+			memset(blocks[i], i, sz);
+		}
 		auto in_vram = [](const void *p) { return (uintptr_t)p >= 0x04000000 && (uintptr_t)p < 0x04200000; };
 		const uint32_t saved_frame = PSPGU::stats.frames;
 		PSPGU::stats.frames = 1000;
@@ -206,6 +210,7 @@ int psp_selftest() {
 		PSP_CHECK(!in_vram(PSPGU::texture_address(blocks[0], sz)), "evicted block not resident when rest in use");
 		for (int i = 0; i < 5; i++) {
 			PSPGU::texture_forget(blocks[i]);
+			free(blocks[i]);
 		}
 		PSP_CHECK(PSPGU::stats.vram_textures == 0 && PSPGU::stats.vram_bytes == 0, "vram cache forget");
 		PSPGU::stats.frames = saved_frame;

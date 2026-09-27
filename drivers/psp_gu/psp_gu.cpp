@@ -131,7 +131,13 @@ const void *texture_address(const void *p_ram, uint32_t p_bytes) {
 void texture_forget(const void *p_ram) {
 	for (uint32_t i = 0; i < vram_entries.size(); i++) {
 		if (vram_entries[i].ram == p_ram) {
-			_vram_remove(i);
+			if (frame_open && vram_entries[i].last_frame == stats.frames) {
+				// Bu karede GE hâlâ okuyor olabilir: anahtarı sil ama alanı kare bitene kadar tut
+				// (eviction yalnızca bu karede kullanılmamış girdileri alır).
+				vram_entries[i].ram = nullptr;
+			} else {
+				_vram_remove(i);
+			}
 			return;
 		}
 	}
