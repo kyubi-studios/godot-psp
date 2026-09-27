@@ -103,7 +103,10 @@ bool MeshStorage::build_surface(const Array &p_arrays, RSE::PrimitiveType p_prim
 	// Düzen: bileşen ofsetleri ve vertex boyutu (en büyük bileşen hizasına yuvarlanır).
 	uint32_t off = 0, max_align = 2;
 	uint32_t uv_off = 0, color_off = 0, normal_off = 0, pos_off = 0;
-	uint32_t vtype = GU_VERTEX_16BIT;
+	// Normalli (ışıklanabilir) yüzeyler: float pozisyon, model matrisinde ölçek yok → GE normali normalize etsin
+	// etmesin ışık doğru. Normalsiz yüzeyler (unshaded/2D): AABB'ye göre ölçekli 16-bit pozisyon (yarı bellek).
+	const bool float_pos = has_normal;
+	uint32_t vtype = float_pos ? GU_VERTEX_32BITF : GU_VERTEX_16BIT;
 	if (has_uv) {
 		uv_off = off;
 		off += 4;
@@ -121,9 +124,16 @@ bool MeshStorage::build_surface(const Array &p_arrays, RSE::PrimitiveType p_prim
 		off += 3;
 		vtype |= GU_NORMAL_8BIT;
 	}
-	off = _align(off, 2);
-	pos_off = off;
-	off += 6;
+	if (float_pos) {
+		off = _align(off, 4);
+		pos_off = off;
+		off += 12;
+		max_align = 4;
+	} else {
+		off = _align(off, 2);
+		pos_off = off;
+		off += 6;
+	}
 	const uint32_t stride = _align(off, max_align);
 
 	AABB aabb = p_aabb;
@@ -133,11 +143,15 @@ bool MeshStorage::build_surface(const Array &p_arrays, RSE::PrimitiveType p_prim
 			aabb.expand_to(positions[i]);
 		}
 	}
-	const Vector3 center = aabb.get_center();
+	Vector3 center = aabb.get_center();
 	Vector3 half = aabb.size * 0.5f;
 	half.x = MAX(half.x, 1e-4f);
 	half.y = MAX(half.y, 1e-4f);
 	half.z = MAX(half.z, 1e-4f);
+	if (float_pos) {
+		center = Vector3();
+		half = Vector3(1, 1, 1); // model matrisine ölçek eklenmez
+	}
 
 	Vector2 uv_min, uv_max;
 	if (has_uv) {
@@ -176,10 +190,17 @@ bool MeshStorage::build_surface(const Array &p_arrays, RSE::PrimitiveType p_prim
 			n[1] = _to_s8(nn.y);
 			n[2] = _to_s8(nn.z);
 		}
-		int16_t *p = (int16_t *)(v + pos_off);
-		p[0] = _to_s16((positions[i].x - center.x) / half.x);
-		p[1] = _to_s16((positions[i].y - center.y) / half.y);
-		p[2] = _to_s16((positions[i].z - center.z) / half.z);
+		if (float_pos) {
+			float *p = (float *)(v + pos_off);
+			p[0] = positions[i].x;
+			p[1] = positions[i].y;
+			p[2] = positions[i].z;
+		} else {
+			int16_t *p = (int16_t *)(v + pos_off);
+			p[0] = _to_s16((positions[i].x - center.x) / half.x);
+			p[1] = _to_s16((positions[i].y - center.y) / half.y);
+			p[2] = _to_s16((positions[i].z - center.z) / half.z);
+		}
 	}
 
 	uint16_t *ibuf = nullptr;

@@ -4,6 +4,7 @@
 #include <pspdisplay.h>
 #include <pspge.h>
 #include <pspgu.h>
+#include <pspkernel.h>
 #include <string.h>
 
 #include "core/templates/local_vector.h"
@@ -14,13 +15,19 @@ Stats stats;
 
 static unsigned int __attribute__((aligned(16))) lists[2][LIST_BYTES / sizeof(unsigned int)];
 static int cur_list = 0;
+
+// Display list önbelleksiz aynadan (0x40000000) yazılır: GE, CPU önbelleğinde kalmış komut/vertex verisini
+// göremez; gerçek PSP'de önbellekli liste bozuk/eksik karelere (titreme) yol açar. (PPSSPP önbelleği taklit etmez.)
+static inline unsigned int *_list(int p_index) {
+	return (unsigned int *)((uintptr_t)lists[p_index] | 0x40000000);
+}
 static bool frame_open = false;
 static uint32_t draw_fb = FB0;
 static char overlay[96] = {};
 
 void init() {
 	sceGuInit();
-	sceGuStart(GU_DIRECT, lists[0]);
+	sceGuStart(GU_DIRECT, _list(0));
 	sceGuDrawBuffer(GU_PSM_5650, (void *)FB0, BUF_STRIDE);
 	sceGuDispBuffer(SCREEN_W, SCREEN_H, (void *)FB1, BUF_STRIDE);
 	sceGuDepthBuffer((void *)ZBUF, BUF_STRIDE);
@@ -45,7 +52,7 @@ void frame_begin() {
 	if (frame_open) {
 		return;
 	}
-	sceGuStart(GU_DIRECT, lists[cur_list]);
+	sceGuStart(GU_DIRECT, _list(cur_list));
 	frame_open = true;
 }
 
@@ -56,9 +63,10 @@ void ensure_list_space(int p_bytes) {
 	if (sceGuCheckList() + p_bytes + LIST_MARGIN <= LIST_BYTES) {
 		return;
 	}
+	sceKernelDcacheWritebackAll();
 	sceGuFinish();
 	sceGuSync(0, 0);
-	sceGuStart(GU_DIRECT, lists[cur_list]);
+	sceGuStart(GU_DIRECT, _list(cur_list));
 	stats.list_flushes++;
 }
 
@@ -190,6 +198,8 @@ void frame_end(bool p_present) {
 	if (!frame_open) {
 		return;
 	}
+	// GE'nin okuyacağı her şey (texture/mesh güncellemeleri dahil) RAM'de olsun.
+	sceKernelDcacheWritebackAll();
 	sceGuFinish();
 	sceGuSync(0, 0);
 	frame_open = false;

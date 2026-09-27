@@ -64,3 +64,5 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | platform/psp/detect.py | `module_gdscript_enabled=True` | GDScript (+0.9 MB kod); demo `bob.gd` ile export yolu test edilir |
 | drivers/psp_gu/rasterizer_canvas_psp.cpp | `final_transform`/`final_clip_rect` doğrudan (canvas dönüşümü zaten dahil); `sceGuScissor(x,y,w,h)`; CLIP_IGNORE geri yükleme; büyük poligonlar parçalı (şerit sürekliliği korunur); vertex renkli 2D mesh modulate'i ambient hilesiyle; filtre/wrap yalnızca değişince | 3. inceleme C1/C2/I1/I2/I3/I5 |
 | drivers/psp_gu/psp_gu.cpp | `texture_forget` kare içinde, bu karede kullanılan VRAM alanını kare sonuna kadar tutar | 3. inceleme I4 |
+| drivers/psp_gu/psp_gu.cpp | Display list önbelleksiz aynadan (`0x40000000`) yazılır; finish öncesi `sceKernelDcacheWritebackAll` | Gerçek PSP'de titreme/bozuk kareler (PPSSPP dcache'i taklit etmez) |
+| drivers/psp_gu/storage/mesh_storage_psp.cpp | Normalli yüzeylerde float pozisyon (model matrisinde ölçek yok) | GE'nin normal normalizasyonundan bağımsız doğru ışık (gerçek PSP'de karanlık görüntü şüphesi) |

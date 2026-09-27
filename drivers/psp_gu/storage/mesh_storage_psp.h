@@ -8,8 +8,9 @@ namespace RendererPSP {
 
 // GE'ye hazır bir mesh yüzeyi. Yükleme anında bir kez dönüştürülür; Godot'un dizileri saklanmaz.
 // Vertex düzeni (GE sırası, her bileşen kendi boyutuna hizalı):
-//   [u16 u, v] [u32 ABGR renk] [s8 nx, ny, nz, pad] [s16 x, y, z]  (olmayan bileşenler atlanır)
-// Pozisyon, yüzey AABB'sinin merkezine/yarı boyutuna göre normalize edilir (model matrisine eklenir);
+//   [u16 u, v] [u32 ABGR renk] [s8 nx, ny, nz, pad] [float x, y, z | s16 x, y, z]  (olmayan bileşenler atlanır)
+// Normalli yüzeylerde pozisyon float'tır (ışık için model matrisinde ölçek olmaz). Normalsiz yüzeylerde
+// pozisyon yüzey AABB'sinin merkezine/yarı boyutuna göre 16-bit normalize edilir (model matrisine eklenir);
 // UV [uv_min, uv_min + uv_range] aralığına göre 0..65535'e (TexScale/TexOffset ile geri açılır).
 struct Surface {
 	void *vertices = nullptr; // memalign(16)
