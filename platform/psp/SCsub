@@ -10,6 +10,7 @@ psp_files = [
     "psp_logger.cpp",
     "psp_posix_stubs.cpp",
     "psp_ctrl_map.cpp",
+    "display_server_psp.cpp",
     "psp_selftest.cpp",
 ]
 

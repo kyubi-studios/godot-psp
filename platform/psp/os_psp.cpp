@@ -1,5 +1,6 @@
 #include "os_psp.h"
 
+#include "display_server_psp.h"
 #include "psp_log.h"
 #include "psp_logger.h"
 
@@ -13,6 +14,7 @@
 
 void OS_PSP::initialize() {
 	OS_Unix::initialize_core();
+	DisplayServerPSP::register_psp_driver();
 }
 
 void OS_PSP::set_main_loop(MainLoop *p_main_loop) {
@@ -56,6 +58,9 @@ void OS_PSP::run() {
 		if (Main::iteration()) {
 			break;
 		}
+		// Faz 1: dummy renderer swap_buffers çağırmaz; vblank beklemesini burada yapıyoruz.
+		// Faz 2'de PSP GU renderer'ı end_frame'de sceGuSwapBuffers + vblank yapacak ve bu çağrı oraya taşınacak.
+		DisplayServer::get_singleton()->swap_buffers();
 		frame++;
 		if ((frame % 60) == 0) {
 			uint32_t used, peak;

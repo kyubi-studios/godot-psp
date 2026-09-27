@@ -6,6 +6,7 @@
 #include <pspiofilemgr.h>
 #include <pspkernel.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 PSP_MODULE_INFO("GodotPSP", 0, 1, 0);
@@ -87,9 +88,23 @@ int main(int argc, char *argv[]) {
 		return fails;
 	}
 
+	// Test: oyun klasöründe "psp_quit_after_frames" dosyası varsa içindeki kare sayısından sonra çık.
+	{
+		char path[300];
+		snprintf(path, sizeof(path), "%s%spsp_quit_after_frames", game_dir, game_dir[strlen(game_dir) - 1] == '/' ? "" : "/");
+		SceUID fd = sceIoOpen(path, PSP_O_RDONLY, 0);
+		if (fd >= 0) {
+			char num[16] = {};
+			sceIoRead(fd, num, sizeof(num) - 1);
+			sceIoClose(fd);
+			os.quit_after_frames = atoi(num);
+			psp_log("[PSP] quit_after_frames=%d", os.quit_after_frames);
+		}
+	}
+
 	char *args[] = {
 		(char *)"--path", game_dir,
-		(char *)"--display-driver", (char *)"headless",
+		(char *)"--display-driver", (char *)"psp",
 		(char *)"--rendering-method", (char *)"dummy",
 		(char *)"--audio-driver", (char *)"Dummy",
 	};

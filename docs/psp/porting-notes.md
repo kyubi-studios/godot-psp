@@ -26,3 +26,5 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | platform/psp/detect.py | `disable_advanced_gui=True` | EBOOT −2.0 MB, heap −0.9 MB; demo gelişmiş GUI kullanmıyor |
 | servers/rendering/SCsub (+ detect.py `disable_renderer_rd`, `RENDERER_RD_DISABLED`) | `renderer_rd/` derlenmez; yalnızca `spirv-reflect` | Vulkan/RD renderer'ı PSP'de kullanılmaz (bağlama sonrası kazanç 86 KB) |
 | servers/register_server_types.cpp | `*RD` sınıf kayıtları `#ifndef RENDERER_RD_DISABLED` | `renderer_rd/` derlenmeyince tanımsız |
+| platform/psp/display_server_psp.* | DisplayServerHeadless tabanlı; sceCtrl → joypad 0, 480×272, vblank | Girdi + vsync |
+| platform/psp/os_psp.cpp (run) | Her iterasyonda `swap_buffers()` (vblank) | Dummy renderer swap etmez; Faz 2'de renderer'a taşınacak |
