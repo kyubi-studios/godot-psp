@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Kullanım: bmp_check.py <in.bmp> <out.png> [--nonblack X,Y ...] [--rgb X,Y,R,G,B,TOL ...]
    [--brighter X1,Y1,X2,Y2,MINDIFF ...]  (X1,Y1 parlaklığı X2,Y2'den en az MINDIFF fazla)
+   [--region-has X0,Y0,X1,Y1,R,G,B,TOL ...]  (dikdörtgende bu renge yakın en az bir piksel var)
+   [--region-lacks X0,Y0,X1,Y1,R,G,B,TOL ...]  (dikdörtgende bu renge yakın hiç piksel yok)
    [--chgt X,Y,A,B,MINDIFF ...]  (X,Y pikselinde kanal A (0=R,1=G,2=B) kanal B'den en az MINDIFF büyük)"""
 import sys
 from PIL import Image
@@ -34,5 +36,11 @@ while i < len(checks):
         px = img.getpixel((x, y))
         if px[a] - px[b] < d:
             print(f"[bmp_check] FAIL chgt pixel {x},{y}={px}: ch{a} - ch{b} < {d}"); ok = False
+    elif kind in ("--region-has", "--region-lacks"):
+        x0, y0, x1, y1, r, g, b, tol = map(int, arg.split(","))
+        found = any(max(abs(p[0] - r), abs(p[1] - g), abs(p[2] - b)) <= tol
+                    for y in range(y0, y1) for x in range(x0, x1) for p in [img.getpixel((x, y))])
+        if found != (kind == "--region-has"):
+            print(f"[bmp_check] FAIL {kind} {x0},{y0}-{x1},{y1} color ({r},{g},{b})±{tol}"); ok = False
 print("[bmp_check] OK" if ok else "[bmp_check] FAILED")
 sys.exit(0 if ok else 1)

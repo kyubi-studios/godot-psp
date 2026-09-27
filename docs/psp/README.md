@@ -36,7 +36,10 @@ Hazır demo: `../psp_demo3d` (editörle açılabilir).
 - **Environment:** arka plan rengi, ambient, fog (derinlik fog'u; üstel fog doğrusal olarak yaklaşıklanır).
 - **StandardMaterial3D:** albedo rengi ve texture, unshaded, cull modları, saydamlık (alpha / alpha scissor / add),
   vertex rengi, uv1 ölçek ve kaydırma, nearest/linear filtre.
-- **Custom shader'lar desteklenmez:** beyaz çizilir. Multimesh, partikül, iskelet ve 2D çizim henüz yok.
+- **2D:** ColorRect, Sprite2D, NinePatch/Panel, Polygon2D, Line2D ve primitive'ler, MeshInstance2D, Control kırpma,
+  Label/Button yazıları (FreeType text server, Godot'un gömülü varsayılan fontu veya proje fontları).
+- **Custom shader'lar desteklenmez:** beyaz çizilir. Multimesh, partikül, iskelet, canvas ışıkları ve canvas
+  shader'ları henüz yok.
 
 ### Davranış metadata'sı (GDScript yerine)
 
@@ -75,8 +78,8 @@ EBOOT `MEMSIZE=1` ile paketlenir: PSP-2000 ve sonrası modellerde genişletilmi�
 
 | Kalem | Değer |
 |---|---|
-| EBOOT.PBP | ~18.4 MB |
-| Heap peak (demo sahnesi) | ~13.1 MB |
-| Kod + heap | ~31.5 MB (kullanılabilir ~52 MB) |
+| EBOOT.PBP | ~20.5 MB (text server + FreeType + Brotli dahil) |
+| Heap peak (demo sahnesi, HUD yazısıyla) | ~14.2 MB |
+| Kod + heap | ~35.6 MB (kullanılabilir ~52 MB) |
 
 Değişikliklerin tam listesi: `docs/psp/porting-notes.md`.

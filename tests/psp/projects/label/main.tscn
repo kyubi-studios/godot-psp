@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Hello" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 300.0
+offset_bottom = 80.0
+theme_override_font_sizes/font_size = 32
+text = "HELLO PSP"
+
+[node name="Wide" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 460.0
+offset_bottom = 260.0
+theme_override_font_sizes/font_size = 64
+text = "WWW"

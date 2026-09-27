@@ -50,9 +50,13 @@ def get_flags():
         "disable_xr": True,
         # Gelişmiş GUI sınıfları (Tree, TextEdit, GraphEdit...) PSP'de gereksiz.
         "disable_advanced_gui": True,
+        # Yazı: hafif FreeType text server (msdf/svg olmadan). Label/Button metinleri için.
+        "module_text_server_fb_enabled": True,
+        "module_freetype_enabled": True,
         "deprecated": False,
         "minizip": False,
-        "brotli": False,
+        # Brotli: Godot'un gömülü varsayılan fontu WOFF2 (Brotli sıkıştırmalı).
+        "brotli": True,
         "vulkan": False,
         "opengl3": False,
         "disable_exceptions": True,

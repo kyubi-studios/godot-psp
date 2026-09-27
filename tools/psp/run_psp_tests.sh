@@ -61,6 +61,8 @@ psp_scene_test position_only 30 40 --rgb 240,150,255,255,0,24 --rgb 5,5,0,0,255,
 # 2D canvas: ColorRect (20..120, 20..70) kırmızı; 64x64 dama Sprite2D merkez (300,150): sol üst beyaz, sağ üst siyah;
 # yeşil Polygon2D üçgen; arka plan varsayılan temizleme rengi (0,0,0.5).
 psp_scene_test canvas_basic 30 40 --rgb 70,45,255,0,0,16 --rgb 284,134,255,255,255,16 --rgb 316,134,0,0,0,16 --rgb 90,230,0,255,0,16 --rgb 450,250,0,0,128,16
+# Label (FreeType + varsayılan font): yazı bölgesinde beyaz var; 64 pt "WWW" gerçek gliflerle ~180 px genişlikte (onaltılık kod kutuları çok daha dar).
+psp_scene_test label 30 40 --region-has 20,20,300,80,255,255,255,40 --region-has 150,160,200,250,255,255,255,60 --region-lacks 20,90,460,145,255,255,255,40
 # 3D demo (../psp_demo3d, Godot 4.7 editörüyle export edilen game.pck).
 DEMO="$(cd .. && pwd)/psp_demo3d"
 if [ -d "$DEMO" ]; then

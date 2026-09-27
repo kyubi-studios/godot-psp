@@ -59,3 +59,4 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | tests/psp/projects/{tex_swizzle,lit_rotated_cam,many_lights,shader_material,position_only} | Swizzle'lı texture + UV offset, döndürülmüş kamera ışığı, >4 ışık, ShaderMaterial, pozisyon-only mesh | İnceleme test boşlukları |
 | drivers/psp_gu/rasterizer_canvas_psp.* | 2D canvas: RECT/NINEPATCH/POLYGON/PRIMITIVE (through modu, vertex'ler display list'ten), MESH (ortografik 3D yolu), kırpma, filtre/repeat; temizleme isteği 2D öncesi | Label/Sprite/UI görünmüyordu |
 | drivers/psp_gu/storage/mesh_storage_psp.cpp | 2D vertex dizileri (z=0) kabul edilir | Polygon2D 4.7'de 2D mesh kullanır |
+| platform/psp/detect.py | `module_text_server_fb_enabled`, `module_freetype_enabled`, `brotli=True` | Label yazıları; gömülü font WOFF2 (Brotli). ELF +1.4 MB |
