@@ -62,7 +62,10 @@ template <typename T>
 class SafeNumeric {
 	std::atomic<T> value;
 
+#if !(defined(PSP_ENABLED) && !defined(THREADS_ENABLED))
+	// PSP (MIPS32): 64-bit atomikler kilitsiz değildir; tek thread'li derlemede libatomic yeterli.
 	static_assert(std::atomic<T>::is_always_lock_free);
+#endif
 
 public:
 	_ALWAYS_INLINE_ void set(T p_value) {

@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifdef UNIX_ENABLED
+#if defined(UNIX_ENABLED) && !defined(PSP_ENABLED)
 
 #include "syslog_logger.h"
 

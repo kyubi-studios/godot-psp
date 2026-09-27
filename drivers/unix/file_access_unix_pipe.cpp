@@ -141,9 +141,14 @@ String FileAccessUnixPipe::get_path_absolute() const {
 uint64_t FileAccessUnixPipe::get_length() const {
 	ERR_FAIL_COND_V_MSG(fd[0] < 0, 0, "Pipe must be opened before use.");
 
+#ifdef PSP_ENABLED
+	// PSP: FIONREAD yok; PSP'de alt süreç/pipe kullanılmaz.
+	return 0;
+#else
 	int buf_rem = 0;
 	ERR_FAIL_COND_V(ioctl(fd[0], FIONREAD, &buf_rem) != 0, 0);
 	return buf_rem;
+#endif
 }
 
 uint64_t FileAccessUnixPipe::get_buffer(uint8_t *p_dst, uint64_t p_length) const {

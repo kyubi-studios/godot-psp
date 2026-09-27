@@ -85,6 +85,8 @@ _ALWAYS_INLINE_ static void _cpu_pause() {
 	asm volatile("or 27,27,27");
 #elif defined(__riscv) // RISC-V.
 	asm volatile(".insn i 0x0F, 0, x0, x0, 0x010");
+#elif defined(__mips__) // MIPS (PSP Allegrex).
+	asm volatile("nop");
 #endif
 #endif
 }
