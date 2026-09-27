@@ -2,6 +2,7 @@
 
 #include "psp_gu.h"
 #include "rasterizer_scene_psp.h"
+#include "storage/light_storage_psp.h"
 #include "storage/material_storage_psp.h"
 #include "storage/mesh_storage_psp.h"
 #include "storage/texture_storage_psp.h"
@@ -28,7 +29,9 @@ RasterizerPSP::RasterizerPSP() {
 	memdelete(mesh_storage);
 	memdelete(material_storage);
 	memdelete(utilities);
+	memdelete(light_storage);
 	utilities = memnew(RendererPSP::Utilities);
+	light_storage = memnew(RendererPSP::LightStorage);
 	texture_storage = memnew(RendererPSP::TextureStorage);
 	material_storage = memnew(RendererPSP::MaterialStorage);
 	mesh_storage = memnew(RendererPSP::MeshStorage);

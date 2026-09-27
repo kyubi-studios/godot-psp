@@ -72,6 +72,23 @@ private:
 	LocalVector<DrawItem> opaque_list;
 	LocalVector<DrawItem> alpha_list;
 
+	// GE ışık parametreleri (dünya uzayı), kare başına bir kez hesaplanır.
+	struct GULight {
+		int type; // GU_DIRECTIONAL / GU_POINTLIGHT / GU_SPOTLIGHT
+		float pos[3]; // directional: ışığa doğru yön; diğerleri: konum
+		float dir[3]; // spot yönü
+		uint32_t color; // ABGR (renk * enerji)
+		float att[3]; // 1 / (a0 + a1 d + a2 d^2)
+		float spot_exponent;
+		float spot_cutoff;
+	};
+	GULight directional_lights[MAX_LIGHTS];
+	int directional_light_count = 0;
+	uint32_t ambient_abgr = 0;
+
+	bool _make_gu_light(RID p_light_instance, GULight &r_light) const;
+	void _apply_lights(const GeometryInstancePSP *p_instance);
+	void _setup_environment(RID p_environment, const CameraData *p_camera_data);
 	Color _background_color(RID p_environment) const;
 	void _fill_lists(const PagedArray<RenderGeometryInstance *> &p_instances, const Transform3D &p_camera);
 	void _draw_item(const DrawItem &p_item);

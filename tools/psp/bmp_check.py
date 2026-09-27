@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Kullanım: bmp_check.py <in.bmp> <out.png> [--nonblack X,Y ...] [--rgb X,Y,R,G,B,TOL ...]"""
+"""Kullanım: bmp_check.py <in.bmp> <out.png> [--nonblack X,Y ...] [--rgb X,Y,R,G,B,TOL ...]
+   [--brighter X1,Y1,X2,Y2,MINDIFF ...]  (X1,Y1 parlaklığı X2,Y2'den en az MINDIFF fazla)"""
 import sys
 from PIL import Image
 
@@ -21,5 +22,11 @@ while i < len(checks):
         px = img.getpixel((x, y))
         if max(abs(px[0] - r), abs(px[1] - g), abs(px[2] - b)) > tol:
             print(f"[bmp_check] FAIL pixel {x},{y} = {px}, want ({r},{g},{b})±{tol}"); ok = False
+    elif kind == "--brighter":
+        x1, y1, x2, y2, d = map(int, arg.split(","))
+        lum = lambda p: (p[0] * 299 + p[1] * 587 + p[2] * 114) // 1000
+        a, b = img.getpixel((x1, y1)), img.getpixel((x2, y2))
+        if lum(a) - lum(b) < d:
+            print(f"[bmp_check] FAIL brighter {x1},{y1}={a} vs {x2},{y2}={b} (need +{d})"); ok = False
 print("[bmp_check] OK" if ok else "[bmp_check] FAILED")
 sys.exit(0 if ok else 1)

@@ -41,3 +41,5 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | drivers/psp_gu/storage/mesh_storage_psp.* | GE vertex formatı (16-bit poz. AABB ölçekli, 8-bit normal, 16-bit UV, ops. 8888 renk, 16-bit indeks); Godot dizileri saklanmaz; `mesh_get_surface` yalnızca meta veri | Bellek; `surface_get_arrays` PSP'de boş döner |
 | drivers/psp_gu/storage/material_storage_psp.* | ShaderLanguage derleyicisi yok; BaseMaterial3D kodundan bayrak çıkarımı; whitelist parametreler | CPU/RAM |
 | drivers/psp_gu/storage/utilities_psp.* | Base type/free yönlendirme | PSP depoları |
+| drivers/psp_gu/storage/light_storage_psp.* | Directional/omni/spot parametreleri, AABB'ler, ışık instance dönüşümleri | GE ışıkları + culling/eşleştirme |
+| drivers/psp_gu/rasterizer_scene_psp.cpp | GE aydınlatma (≤4 ışık/nesne), ambient, doğrusal fog (üstel → yaklaşım), arka yüz kırpma (`GU_CW` = Godot ön yüzü, test ile doğrulandı), saydam sıralama | Faz 2 Task 3 |

@@ -1,6 +1,7 @@
 #include "rasterizer_scene_psp.h"
 
 #include "psp_gu.h"
+#include "storage/light_storage_psp.h"
 #include "storage/material_storage_psp.h"
 #include "storage/mesh_storage_psp.h"
 
@@ -58,6 +59,145 @@ void RasterizerScenePSP::geometry_instance_free(RenderGeometryInstance *p_geomet
 
 uint32_t RasterizerScenePSP::geometry_instance_get_pair_mask() {
 	return (1 << RSE::INSTANCE_LIGHT);
+}
+
+/* LIGHTS / ENVIRONMENT */
+
+// Godot'un ön yüz sarımı (ekran uzayında) GE'nin GU_CW/GU_CCW ayarına karşılığı.
+static constexpr int GODOT_FRONT_FACE = GU_CW;
+
+bool RasterizerScenePSP::_make_gu_light(RID p_light_instance, GULight &r_light) const {
+	LightStorage *lights = LightStorage::get_psp_singleton();
+	const LightInstance *li = lights->get_light_instance(p_light_instance);
+	if (!li) {
+		return false;
+	}
+	const Light *light = lights->get_light(li->light);
+	if (!light) {
+		return false;
+	}
+	float energy = light->param[RSE::LIGHT_PARAM_ENERGY];
+	if (light->negative) {
+		energy = 0.0f; // GE eksi ışık desteklemez.
+	}
+	const Color c = light->color * energy;
+	r_light.color = PSPGU::color_to_abgr(c.r, c.g, c.b, 1.0f);
+	const Vector3 origin = li->transform.origin;
+	const Vector3 forward = -li->transform.basis.get_column(2).normalized();
+	const float range = MAX(light->param[RSE::LIGHT_PARAM_RANGE], 0.001f);
+	r_light.att[0] = 1.0f;
+	r_light.att[1] = 0.0f;
+	r_light.att[2] = 4.0f / (range * range); // menzilin sonunda ~%20
+	r_light.dir[0] = forward.x;
+	r_light.dir[1] = forward.y;
+	r_light.dir[2] = forward.z;
+	r_light.spot_exponent = 0.0f;
+	r_light.spot_cutoff = -1.0f;
+	switch (light->type) {
+		case RSE::LIGHT_DIRECTIONAL:
+			r_light.type = GU_DIRECTIONAL;
+			r_light.pos[0] = -forward.x;
+			r_light.pos[1] = -forward.y;
+			r_light.pos[2] = -forward.z;
+			break;
+		case RSE::LIGHT_SPOT:
+			r_light.type = GU_SPOTLIGHT;
+			r_light.pos[0] = origin.x;
+			r_light.pos[1] = origin.y;
+			r_light.pos[2] = origin.z;
+			r_light.spot_exponent = light->param[RSE::LIGHT_PARAM_SPOT_ATTENUATION];
+			r_light.spot_cutoff = Math::cos(Math::deg_to_rad(light->param[RSE::LIGHT_PARAM_SPOT_ANGLE]));
+			break;
+		default:
+			r_light.type = GU_POINTLIGHT;
+			r_light.pos[0] = origin.x;
+			r_light.pos[1] = origin.y;
+			r_light.pos[2] = origin.z;
+			break;
+	}
+	return true;
+}
+
+void RasterizerScenePSP::_apply_lights(const GeometryInstancePSP *p_instance) {
+	int count = 0;
+	for (int i = 0; i < directional_light_count && count < MAX_LIGHTS; i++) {
+		const GULight &l = directional_lights[i];
+		ScePspFVector3 pos = { l.pos[0], l.pos[1], l.pos[2] };
+		sceGuLight(count, l.type, GU_DIFFUSE, &pos);
+		sceGuLightColor(count, GU_DIFFUSE, l.color);
+		sceGuLightColor(count, GU_AMBIENT, 0);
+		sceGuLightAtt(count, 1.0f, 0.0f, 0.0f);
+		sceGuEnable(GU_LIGHT0 + count);
+		count++;
+	}
+	for (int i = 0; i < p_instance->paired_light_count && count < MAX_LIGHTS; i++) {
+		GULight l;
+		if (!_make_gu_light(p_instance->paired_lights[i], l) || l.type == GU_DIRECTIONAL) {
+			continue;
+		}
+		ScePspFVector3 pos = { l.pos[0], l.pos[1], l.pos[2] };
+		sceGuLight(count, l.type, GU_DIFFUSE, &pos);
+		sceGuLightColor(count, GU_DIFFUSE, l.color);
+		sceGuLightColor(count, GU_AMBIENT, 0);
+		sceGuLightAtt(count, l.att[0], l.att[1], l.att[2]);
+		if (l.type == GU_SPOTLIGHT) {
+			ScePspFVector3 dir = { l.dir[0], l.dir[1], l.dir[2] };
+			sceGuLightSpot(count, &dir, l.spot_exponent, l.spot_cutoff);
+		}
+		sceGuEnable(GU_LIGHT0 + count);
+		count++;
+	}
+	for (int i = count; i < MAX_LIGHTS; i++) {
+		sceGuDisable(GU_LIGHT0 + i);
+	}
+}
+
+void RasterizerScenePSP::_setup_environment(RID p_environment, const CameraData *p_camera_data) {
+	Color ambient(0.2f, 0.2f, 0.2f);
+	bool fog = false;
+	float fog_near = 0.0f, fog_far = 1.0f;
+	Color fog_color;
+	if (p_environment.is_valid() && is_environment(p_environment)) {
+		const float energy = environment_get_ambient_light_energy(p_environment);
+		switch (environment_get_ambient_source(p_environment)) {
+			case RSE::ENV_AMBIENT_SOURCE_COLOR:
+				ambient = environment_get_ambient_light(p_environment) * energy;
+				break;
+			case RSE::ENV_AMBIENT_SOURCE_DISABLED:
+				ambient = Color(0, 0, 0);
+				break;
+			case RSE::ENV_AMBIENT_SOURCE_BG:
+				ambient = (environment_get_background(p_environment) == RSE::ENV_BG_COLOR ? environment_get_bg_color(p_environment) : ambient) * energy;
+				break;
+			default:
+				break;
+		}
+		if (environment_get_fog_enabled(p_environment)) {
+			fog = true;
+			fog_color = environment_get_fog_light_color(p_environment);
+			const float zfar = p_camera_data->main_projection.get_z_far();
+			if (environment_get_fog_mode(p_environment) == RSE::ENV_FOG_MODE_DEPTH) {
+				fog_near = environment_get_fog_depth_begin(p_environment);
+				const float end = environment_get_fog_depth_end(p_environment);
+				fog_far = end > 0.0f ? end : zfar;
+			} else {
+				// Üstel fog'un doğrusal yaklaşımı: yoğunluğun %95'e ulaştığı mesafe.
+				const float density = MAX(environment_get_fog_density(p_environment), 0.0001f);
+				fog_near = 0.0f;
+				fog_far = MIN(3.0f / density, zfar);
+			}
+			fog_far = MAX(fog_far, fog_near + 0.01f);
+		}
+	}
+	ambient_abgr = PSPGU::color_to_abgr(ambient.r, ambient.g, ambient.b, 1.0f);
+	sceGuAmbient(ambient_abgr);
+	sceGuLightMode(0);
+	if (fog) {
+		sceGuFog(fog_near, fog_far, PSPGU::color_to_abgr(fog_color.r, fog_color.g, fog_color.b, 1.0f));
+		sceGuEnable(GU_FOG);
+	} else {
+		sceGuDisable(GU_FOG);
+	}
 }
 
 /* RENDER */
@@ -147,9 +287,23 @@ void RasterizerScenePSP::_draw_item(const DrawItem &p_item) {
 	}
 	sceGuColor(PSPGU::color_to_abgr(albedo.r, albedo.g, albedo.b, albedo.a));
 
-	sceGuDisable(GU_LIGHTING);
+	if (flags & SHADER_UNSHADED) {
+		sceGuDisable(GU_LIGHTING);
+	} else {
+		sceGuEnable(GU_LIGHTING);
+		_apply_lights(p_item.instance);
+	}
+	sceGuColorMaterial((flags & SHADER_VERTEX_COLOR) ? (GU_AMBIENT | GU_DIFFUSE) : 0);
 	sceGuDisable(GU_TEXTURE_2D);
-	sceGuDisable(GU_CULL_FACE);
+
+	if (flags & SHADER_CULL_DISABLED) {
+		sceGuDisable(GU_CULL_FACE);
+	} else {
+		// Arka yüz kırpma; cull_front ve yansıtılmış dönüşüm (negatif determinant) sarımı çevirir.
+		const bool flip = ((flags & SHADER_CULL_FRONT) != 0) != p_item.instance->mirror;
+		sceGuFrontFace(flip ? (GODOT_FRONT_FACE == GU_CW ? GU_CCW : GU_CW) : GODOT_FRONT_FACE);
+		sceGuEnable(GU_CULL_FACE);
+	}
 
 	sceGuDrawArray(surf.primitive, surf.vertex_type | GU_TRANSFORM_3D, surf.index_count > 0 ? surf.index_count : surf.vertex_count, surf.indices, surf.vertices);
 	PSPGU::stats.draws_accum++;
@@ -174,6 +328,17 @@ void RasterizerScenePSP::render_scene(const Ref<RenderSceneBuffers> &p_render_bu
 	sceGuSetMatrix(GU_PROJECTION, &m);
 	_to_gu_matrix(p_camera_data->main_transform.affine_inverse(), m);
 	sceGuSetMatrix(GU_VIEW, &m);
+
+	_setup_environment(p_environment, p_camera_data);
+	directional_light_count = 0;
+	LightStorage *lights = LightStorage::get_psp_singleton();
+	for (uint32_t i = 0; i < p_lights.size() && directional_light_count < MAX_LIGHTS; i++) {
+		const LightInstance *li = lights->get_light_instance(p_lights[i]);
+		const Light *light = li ? lights->get_light(li->light) : nullptr;
+		if (light && light->type == RSE::LIGHT_DIRECTIONAL && _make_gu_light(p_lights[i], directional_lights[directional_light_count])) {
+			directional_light_count++;
+		}
+	}
 
 	_fill_lists(p_instances, p_camera_data->main_transform);
 
