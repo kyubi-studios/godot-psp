@@ -35,6 +35,9 @@ bool Utilities::free(RID p_rid) {
 	} else if (materials->owns_shader(p_rid)) {
 		materials->shader_free(p_rid);
 		return true;
+	} else if (textures->owns_psp_texture(p_rid)) {
+		textures->texture_free(p_rid);
+		return true;
 	} else if (textures->owns_render_target(p_rid)) {
 		textures->render_target_free(p_rid);
 		return true;

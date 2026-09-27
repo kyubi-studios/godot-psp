@@ -85,6 +85,7 @@ private:
 	GULight directional_lights[MAX_LIGHTS];
 	int directional_light_count = 0;
 	uint32_t ambient_abgr = 0;
+	const void *bound_texture = nullptr; // son sceGuTexImage (gereksiz flush'ı önler)
 
 	bool _make_gu_light(RID p_light_instance, GULight &r_light) const;
 	void _apply_lights(const GeometryInstancePSP *p_instance);

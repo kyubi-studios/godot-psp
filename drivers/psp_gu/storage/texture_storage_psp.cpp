@@ -4,6 +4,75 @@
 
 using namespace RendererPSP;
 
+/* TEXTURES */
+
+RID TextureStorage::texture_allocate() {
+	return texture_owner.allocate_rid();
+}
+
+void TextureStorage::texture_free(RID p_rid) {
+	Texture *t = texture_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL(t);
+	total_bytes -= t->data.bytes;
+	PSPTexture::free_data(t->data);
+	texture_owner.free(p_rid);
+}
+
+void TextureStorage::texture_2d_initialize(RID p_texture, const Ref<Image> &p_image) {
+	Texture t;
+	if (p_image.is_valid()) {
+		t.format = p_image->get_format();
+		if (!PSPTexture::convert(p_image, t.data)) {
+			WARN_PRINT_ONCE("PSP: a texture could not be converted and will be drawn untextured.");
+		}
+	}
+	total_bytes += t.data.bytes;
+	texture_owner.initialize_rid(p_texture, t);
+}
+
+void TextureStorage::texture_2d_update(RID p_texture, const Ref<Image> &p_image, int p_layer) {
+	Texture *t = texture_owner.get_or_null(p_texture);
+	ERR_FAIL_NULL(t);
+	total_bytes -= t->data.bytes;
+	PSPTexture::free_data(t->data);
+	if (p_image.is_valid()) {
+		t->format = p_image->get_format();
+		PSPTexture::convert(p_image, t->data);
+	}
+	total_bytes += t->data.bytes;
+}
+
+void TextureStorage::texture_2d_placeholder_initialize(RID p_texture) {
+	_init_empty(p_texture);
+}
+
+void TextureStorage::texture_replace(RID p_texture, RID p_by_texture) {
+	// p_by_texture'ın verisi p_texture'a taşınır, p_by_texture silinir (RID'ler geçerli kalır).
+	Texture *t = texture_owner.get_or_null(p_texture);
+	Texture *by = texture_owner.get_or_null(p_by_texture);
+	ERR_FAIL_NULL(t);
+	ERR_FAIL_NULL(by);
+	total_bytes -= t->data.bytes;
+	PSPTexture::free_data(t->data);
+	*t = *by;
+	by->data = PSPTextureData(); // sahiplik devredildi
+	texture_owner.free(p_by_texture);
+}
+
+Image::Format TextureStorage::texture_get_format(RID p_texture) const {
+	Texture *t = texture_owner.get_or_null(p_texture);
+	ERR_FAIL_NULL_V(t, Image::FORMAT_MAX);
+	return t->format;
+}
+
+Size2 TextureStorage::texture_size_with_proxy(RID p_proxy) {
+	Texture *t = texture_owner.get_or_null(p_proxy);
+	ERR_FAIL_NULL_V(t, Size2());
+	return Size2(t->data.source_width, t->data.source_height);
+}
+
+/* RENDER TARGETS */
+
 RID TextureStorage::render_target_create() {
 	return render_target_owner.make_rid(RenderTarget());
 }

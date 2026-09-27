@@ -4,6 +4,7 @@
 #include "storage/light_storage_psp.h"
 #include "storage/material_storage_psp.h"
 #include "storage/mesh_storage_psp.h"
+#include "storage/texture_storage_psp.h"
 
 #include "servers/rendering/rendering_server_globals.h"
 #include "servers/rendering/storage/texture_storage.h"
@@ -294,7 +295,41 @@ void RasterizerScenePSP::_draw_item(const DrawItem &p_item) {
 		_apply_lights(p_item.instance);
 	}
 	sceGuColorMaterial((flags & SHADER_VERTEX_COLOR) ? (GU_AMBIENT | GU_DIFFUSE) : 0);
-	sceGuDisable(GU_TEXTURE_2D);
+	const TextureStorage::Texture *tex = nullptr;
+	if (mat && mat->albedo_texture.is_valid()) {
+		tex = static_cast<TextureStorage *>(RSG::texture_storage)->get_psp_texture(mat->albedo_texture);
+		if (tex && !tex->data.pixels) {
+			tex = nullptr;
+		}
+	}
+	if (tex) {
+		const PSPTextureData &td = tex->data;
+		if (bound_texture != td.pixels) {
+			sceGuTexMode(td.psm, 0, 0, td.swizzled ? GU_TRUE : GU_FALSE);
+			sceGuTexImage(0, td.width, td.height, td.width, td.pixels);
+			sceGuTexFlush();
+			bound_texture = td.pixels;
+		}
+		sceGuTexFunc(GU_TFX_MODULATE, GU_TCC_RGBA);
+		const int filter = (flags & SHADER_FILTER_NEAREST) ? GU_NEAREST : GU_LINEAR;
+		sceGuTexFilter(filter, filter);
+		sceGuTexWrap(GU_REPEAT, GU_REPEAT);
+		// Vertex UV'si [0,2) aralığında (u16/32768): gerçek UV = uv_min + raw * range/2, ardından material uv1.
+		const Vector2 scale = surf.uv_range * 0.5f * mat->uv_scale;
+		const Vector2 offset = surf.uv_min * mat->uv_scale + mat->uv_offset;
+		sceGuTexScale(scale.x, scale.y);
+		sceGuTexOffset(offset.x, offset.y);
+		sceGuEnable(GU_TEXTURE_2D);
+	} else {
+		sceGuDisable(GU_TEXTURE_2D);
+	}
+	if (flags & SHADER_ALPHA_SCISSOR) {
+		const int ref = CLAMP((int)(mat->alpha_scissor * 255.0f), 0, 255);
+		sceGuAlphaFunc(GU_GREATER, ref, 0xff);
+		sceGuEnable(GU_ALPHA_TEST);
+	} else {
+		sceGuDisable(GU_ALPHA_TEST);
+	}
 
 	if (flags & SHADER_CULL_DISABLED) {
 		sceGuDisable(GU_CULL_FACE);
@@ -341,6 +376,7 @@ void RasterizerScenePSP::render_scene(const Ref<RenderSceneBuffers> &p_render_bu
 	}
 
 	_fill_lists(p_instances, p_camera_data->main_transform);
+	bound_texture = nullptr;
 
 	sceGuDepthMask(GU_FALSE); // GU: GU_FALSE = derinlik yazılır
 	sceGuDisable(GU_BLEND);

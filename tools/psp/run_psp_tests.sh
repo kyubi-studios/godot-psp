@@ -37,5 +37,7 @@ psp_scene_test cull_check 30 40 --brighter 220,136,5,5,100 --brighter 260,136,5,
 psp_scene_test alpha_blend 30 40 --rgb 240,136,128,0,128,32 --rgb 5,5,0,0,255,16
 # Yoğun beyaz derinlik fog'u: kırmızı küp neredeyse beyaz.
 psp_scene_test fog 30 40 --rgb 240,136,255,255,255,80
+# 2x2 dama texture'lı düzlem (nearest): sol üst kırmızı, sağ üst yeşil, sol alt yeşil.
+psp_scene_test textured 30 40 --rgb 210,106,255,0,0,24 --rgb 270,106,0,255,0,24 --rgb 210,166,0,255,0,24 --rgb 5,5,0,0,255,16
 echo "[psp_tests] $([ $rc -eq 0 ] && echo ALL PASS || echo FAILURES)"
 exit $rc

@@ -43,3 +43,5 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | drivers/psp_gu/storage/utilities_psp.* | Base type/free yönlendirme | PSP depoları |
 | drivers/psp_gu/storage/light_storage_psp.* | Directional/omni/spot parametreleri, AABB'ler, ışık instance dönüşümleri | GE ışıkları + culling/eşleştirme |
 | drivers/psp_gu/rasterizer_scene_psp.cpp | GE aydınlatma (≤4 ışık/nesne), ambient, doğrusal fog (üstel → yaklaşım), arka yüz kırpma (`GU_CW` = Godot ön yüzü, test ile doğrulandı), saydam sıralama | Faz 2 Task 3 |
+| drivers/psp_gu/psp_texture.* | Image → RGBA8 → en yakın 2^n (8..256) → 5650/5551/4444 → swizzle (yükseklik ≥ 8); orijinal Image saklanmaz | Bellek; `texture_2d_get` boş döner |
+| drivers/psp_gu/storage/texture_storage_psp.* | Texture API (tüm başlatıcılar RID'i başlatır), `texture_replace` veri taşır | Dummy başlatmadığı RID'lerde `texture_free` hata veriyordu |
