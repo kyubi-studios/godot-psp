@@ -6,6 +6,8 @@ Import("env")
 psp_files = [
     "godot_psp.cpp",
     "os_psp.cpp",
+    "psp_log.cpp",
+    "psp_logger.cpp",
     "psp_posix_stubs.cpp",
 ]
 

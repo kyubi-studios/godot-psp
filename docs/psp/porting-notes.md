@@ -17,3 +17,9 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | platform/psp/platform_config.h | `PTHREAD_NO_RENAME` | `pthread_setname_np` yok |
 | drivers/unix/os_unix.cpp (get_memory_info) | `getrlimit` bloğu PSP'de atlanır | pspdev'de `getrlimit` yok |
 | platform/psp/psp_posix_stubs.cpp | dup2/waitpid/setsid/vfork/sigaction/mkfifo/ftruncate → ENOSYS | newlib bildiriyor, pspdev libc uygulamıyor; bağlama hatası |
+| platform/psp/psp_gc.ld (+ detect.py `-T`) | Varsayılan PSP linker betiği + `KEEP` (sceStub, lib.ent/stub, sceModuleInfo/Resident/Nid/Vstub) | `--gc-sections` NID tablolarını siliyordu; `psp-fixup-imports`: "no nid section found" |
+| platform/psp/detect.py (LIBS) | `c`, `m`, `pspuser`, `psprtc`, `pspnet*`, `pspkernel` çıkarıldı | Specs bunları doğru sırayla ekler; açık `-lc` newlib chdir/getcwd'yi libcglue'dan önce bağlıyordu (cwd boş) |
+| platform/psp/detect.py | `disable_path_overrides=False` | EBOOT oyun klasörünü `--path` ile verir |
+| platform/psp/psp_logger.* | Godot logger → `psp_log_raw` (stdout + devctl) | Headless PPSSPP yalnızca devctl çıktısını gösterir |
+| platform/psp/godot_psp.cpp | Cihaz kökü `umd0:` → `umd0:/` | libcglue `chdir("umd0:")` ENOTDIR verir |
+| platform/psp/os_psp.h | `get_executable_path()` = argv[0] | OS_Unix'te PSP için uygulama yok |

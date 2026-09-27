@@ -1,6 +1,7 @@
 #include "os_psp.h"
 
 #include "psp_log.h"
+#include "psp_logger.h"
 
 #include "core/config/project_settings.h"
 #include "core/os/main_loop.h"
@@ -57,8 +58,10 @@ void OS_PSP::run() {
 		}
 		frame++;
 		if ((frame % 60) == 0) {
-			psp_log("[PSP] frame %d mem=%llu peak=%llu", frame,
-					(unsigned long long)Memory::get_mem_usage(), (unsigned long long)Memory::get_mem_max_usage());
+			uint32_t used, peak;
+			psp_mem_stats(used, peak);
+			psp_log("[PSP] frame %d mem=%u peak=%u t=%llu", frame, (unsigned)used, (unsigned)peak,
+					(unsigned long long)get_ticks_msec());
 		}
 		if (quit_after_frames > 0 && frame >= quit_after_frames) {
 			break;
@@ -69,4 +72,8 @@ void OS_PSP::run() {
 }
 
 OS_PSP::OS_PSP() {
+	// OS_Unix'in terminal logger'ı yerine PSP kanalı (PPSSPP headless çıktıyı yalnızca devctl'den gösterir).
+	Vector<Logger *> loggers;
+	loggers.push_back(memnew(PSPLogger));
+	_set_logger(memnew(CompositeLogger(loggers)));
 }

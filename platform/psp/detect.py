@@ -55,6 +55,8 @@ def get_flags():
         "opengl3": False,
         "disable_exceptions": True,
         "optimize": "size",
+        # EBOOT oyun klasörünü (--path) ve ileride game.pck'yi (--main-pack) argümanla alır.
+        "disable_path_overrides": False,
         "accesskit": False,
         "sdl": False,
     }
@@ -87,11 +89,9 @@ def configure(env: "SConsEnvironment"):
     # int32_t/uint32_t'yi int/unsigned int yap (bkz. psp_stdint_fix.h).
     env.Append(CCFLAGS=["-include", env.Dir("#platform/psp").abspath + "/psp_stdint_fix.h"])
     env.Append(CCFLAGS=["-Umips", "-G0", "-ffunction-sections", "-fdata-sections"])
-    env.Append(LINKFLAGS=["-G0", "-Wl,--gc-sections"])
+    # --gc-sections PSP modül bölümlerini (NID tabloları) silmesin diye KEEP'li linker betiği.
+    env.Append(LINKFLAGS=["-G0", "-Wl,--gc-sections", "-T", env.File("#platform/psp/psp_gc.ld").abspath])
     env.Append(LIBPATH=[os.path.join(psp_sdk, "lib")])
-    env.Append(
-        LIBS=[
-            "pspgum", "pspgu", "pspge", "pspdisplay", "pspctrl", "psppower", "psprtc",
-            "pspdebug", "pspnet_inet", "pspnet", "pspuser", "atomic", "m", "c",
-        ]
-    )
+    # libc/libm/libcglue/pspuser/psprtc/pspnet* derleyici specs'inden (*lib) doğru sırayla gelir.
+    # Burada tekrar -lc vermek newlib'in chdir/getcwd/strtol'unu libcglue'dan önce bağlar (cwd boş kalır).
+    env.Append(LIBS=["pspgum", "pspgu", "pspge", "pspdisplay", "pspctrl", "psppower", "pspdebug", "atomic"])

@@ -22,6 +22,8 @@ public:
 	MainLoop *get_main_loop() const override { return main_loop; }
 	Vector<String> get_video_adapter_driver_info() const override { return Vector<String>(); }
 	void initialize_joypads() override {}
+	String get_executable_path() const override { return executable_path; }
+	String executable_path; // argv[0], ör. "ms0:/PSP/GAME/GodotDemo/EBOOT.PBP" veya PPSSPP'de "umd0:/EBOOT.PBP"
 	Error get_entropy(uint8_t *r_buffer, int p_bytes) override;
 	void run();
 
