@@ -53,6 +53,8 @@ def get_flags():
         # Yazı: hafif FreeType text server (msdf/svg olmadan). Label/Button metinleri için.
         "module_text_server_fb_enabled": True,
         "module_freetype_enabled": True,
+        # GDScript (derleyici + VM). Kapatmak için: scons platform=psp module_gdscript_enabled=no
+        "module_gdscript_enabled": True,
         "deprecated": False,
         "minizip": False,
         # Brotli: Godot'un gömülü varsayılan fontu WOFF2 (Brotli sıkıştırmalı).

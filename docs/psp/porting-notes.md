@@ -61,3 +61,4 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | drivers/psp_gu/storage/mesh_storage_psp.cpp | 2D vertex dizileri (z=0) kabul edilir | Polygon2D 4.7'de 2D mesh kullanır |
 | platform/psp/detect.py | `module_text_server_fb_enabled`, `module_freetype_enabled`, `brotli=True` | Label yazıları; gömülü font WOFF2 (Brotli). ELF +1.4 MB |
 | drivers/psp_gu/psp_gu.cpp (texture_address) | Texture VRAM önbelleği (~1.2 MB, LRU, first-fit, bu karede kullanılanlar atılmaz; mutlak 0x04000000 adresi) | GE VRAM'den çok daha hızlı okur |
+| platform/psp/detect.py | `module_gdscript_enabled=True` | GDScript (+0.9 MB kod); demo `bob.gd` ile export yolu test edilir |

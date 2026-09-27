@@ -65,13 +65,16 @@ psp_scene_test position_only 30 40 --rgb 240,150,255,255,0,24 --rgb 5,5,0,0,255,
 psp_scene_test canvas_basic 30 40 --rgb 70,45,255,0,0,16 --rgb 284,134,255,255,255,16 --rgb 316,134,0,0,0,16 --rgb 90,230,0,255,0,16 --rgb 450,250,0,0,128,16
 # Label (FreeType + varsayılan font): yazı bölgesinde beyaz var; 64 pt "WWW" gerçek gliflerle ~180 px genişlikte (onaltılık kod kutuları çok daha dar).
 psp_scene_test label 30 40 --region-has 20,20,300,80,255,255,255,40 --region-has 150,160,200,250,255,255,255,60 --region-lacks 20,90,460,145,255,255,255,40
+# GDScript: _ready (lambda/map/reduce) ve _process ile kutuyu hareket ettirir (30. karede x = 20 + 30*4 = 140).
+psp_scene_test gdscript 30 40 --rgb 160,120,0,255,0,16 --rgb 40,120,0,0,0,16
+grep -q '\[GD\] ready sum=84' bin/psp_tests/gdscript/test.log && grep -q '\[GD\] frame30 box_x=140' bin/psp_tests/gdscript/test.log && echo "[psp_tests] gdscript output PASS" || { echo "[psp_tests] gdscript output FAIL"; rc=1; }
 # 3D demo (../psp_demo3d, Godot 4.7 editörüyle export edilen game.pck).
 DEMO="$(cd .. && pwd)/psp_demo3d"
 if [ -d "$DEMO" ]; then
   if tools/psp/export_pck.sh "$DEMO" bin/psp_tests/demo_game.pck; then
     tools/psp/stage_game.sh bin/psp_tests/demo_game.pck bin/psp_tests/demo >/dev/null 2>&1
     echo 120 > bin/psp_tests/demo/psp_screenshot_at_frame; echo 300 > bin/psp_tests/demo/psp_quit_after_frames
-    RUN_TEST_EXPECT_EXIT=1 tools/psp/run_test.sh bin/psp_tests/demo 60 '\[PSP\] main_pack=' '\[PSP\] behaviors spinners=7 cameras=1' '\[PSP\] screenshot frame=120' '\[PSP\] exit clean' -- --rgb 5,5,115,158,217,12 || rc=1
+    RUN_TEST_EXPECT_EXIT=1 tools/psp/run_test.sh bin/psp_tests/demo 60 '\[PSP\] main_pack=' '\[PSP\] behaviors spinners=7 cameras=1' '\[GD\] demo bob ready' '\[PSP\] screenshot frame=120' '\[PSP\] exit clean' -- --rgb 5,5,115,158,217,12 || rc=1
     tools/psp/check_fps.sh bin/psp_tests/demo/test.log 30 || rc=1
     peak=$(grep -oE 'peak=[0-9]+' bin/psp_tests/demo/test.log | tail -1 | cut -d= -f2)
     if [ "${peak:-99999999999}" -le 46137344 ]; then echo "[psp_tests] demo peak $peak <= 44 MB PASS"; else echo "[psp_tests] demo peak $peak FAIL"; rc=1; fi

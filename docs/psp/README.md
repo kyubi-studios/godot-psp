@@ -1,7 +1,7 @@
 # Godot 4.7.2 — PSP portu
 
-Godot 4.7.2'nin PSP (PSP-2001) portu. 3D sahneler PSP GE (sceGu) ile çizilir. Oyun mantığı GDScript değil, C++'tır:
-`.tscn` sahnelerindeki node'lar `metadata/psp_behavior` ile işaretlenir.
+Godot 4.7.2'nin PSP (PSP-2001) portu. 3D ve 2D sahneler PSP GE (sceGu) ile çizilir. Oyun mantığı **GDScript** ile
+yazılabilir; ayrıca script gerektirmeyen hazır C++ davranışları (`metadata/psp_behavior`) vardır.
 
 ## Gereksinimler
 
@@ -41,7 +41,13 @@ Hazır demo: `../psp_demo3d` (editörle açılabilir).
 - **Custom shader'lar desteklenmez:** beyaz çizilir. Multimesh, partikül, iskelet, canvas ışıkları ve canvas
   shader'ları henüz yok.
 
-### Davranış metadata'sı (GDScript yerine)
+### GDScript
+
+Tam GDScript (derleyici + VM) derlemeye dahildir; export edilen `.pck` içindeki script'ler (token biçimi) doğrudan
+çalışır. Bellek gerekirse kapatılabilir: `scons platform=psp module_gdscript_enabled=no` (~0.9 MB kod).
+PSP'nin CPU'su 333 MHz ve FPU'su tek hassasiyetlidir; `_process` içinde ağır iş yapmaktan kaçının.
+
+### Davranış metadata'sı (script gerektirmez)
 
 | Metadata | Etki |
 |---|---|
@@ -78,8 +84,9 @@ EBOOT `MEMSIZE=1` ile paketlenir: PSP-2000 ve sonrası modellerde genişletilmi�
 
 | Kalem | Değer |
 |---|---|
-| EBOOT.PBP | ~20.5 MB (text server + FreeType + Brotli dahil) |
-| Heap peak (demo sahnesi, HUD yazısıyla) | ~14.2 MB |
-| Kod + heap | ~35.6 MB (kullanılabilir ~52 MB) |
+| EBOOT.PBP | ~20.3 MB (GDScript, text server, FreeType, Brotli dahil) |
+| Heap peak (demo: 3D sahne + HUD + GDScript) | ~14.5 MB |
+| Kod + heap | ~36 MB (kullanılabilir ~52 MB) |
+| Texture VRAM önbelleği | ~1.2 MB (LRU) |
 
 Değişikliklerin tam listesi: `docs/psp/porting-notes.md`.
