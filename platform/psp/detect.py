@@ -48,6 +48,8 @@ def get_flags():
         "disable_navigation_2d": True,
         "disable_navigation_3d": True,
         "disable_xr": True,
+        # Gelişmiş GUI sınıfları (Tree, TextEdit, GraphEdit...) PSP'de gereksiz.
+        "disable_advanced_gui": True,
         "deprecated": False,
         "minizip": False,
         "brotli": False,

@@ -1212,3 +1212,22 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 9: Faz 1 sonu raporu**
 
 Kullanıcıya: spike tablosu, peak bellek, `docs/psp/porting-notes.md` özeti. Faz 2 (renderer) planının yazılması için onay iste.
+
+---
+
+## Ek (2026-09-27, karar noktası sonrası): Task 3b ve 3c — Budama
+
+Kullanıcı karar noktasında B ve C seçeneklerini birlikte seçti. Task 4'ten önce uygulanır.
+
+### Task 3b: `disable_advanced_gui=yes`
+
+- `platform/psp/detect.py` `get_flags()`'a `"disable_advanced_gui": True`.
+- Test: `tools/psp/check_size.sh <max_bytes>` (EBOOT.PBP boyutu ≤ max) ve Task 3 boot testi PASS.
+- RED: `check_size.sh 20971520` (20 MB) mevcut 20.39 MB ile FAIL.
+- GREEN: budama sonrası PASS; yeni boyut `docs/psp/spike-report.md`'ye eklenir.
+
+### Task 3c: `renderer_rd`'yi PSP derlemesinden çıkarmak
+
+- `servers/rendering/SCsub`: `renderer_rd/SCsub`'u PSP'de (`env["platform"] == "psp"` veya yeni `rd` bayrağı) atla.
+- `rendering_device*.cpp` ve RD'ye referans veren çekirdek dosyalar (`main/main.cpp`, `servers/rendering/rendering_server_default.cpp`, `servers/register_server_types.cpp`, `rendering_server.cpp`, `core/config/engine.cpp`, `core/io/image.cpp`, `scene/3d/lightmap_gi.cpp`, `scene/debugger/scene_debugger.cpp`): RD kullanımları `#ifdef` ile ayrılır; her biri porting-notes'a.
+- Test: `check_size.sh` eşiği Task 3b sonucundan en az 1 MB düşük; Task 3 boot testi PASS.

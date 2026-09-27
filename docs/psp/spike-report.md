@@ -60,3 +60,10 @@ kullanılmayan ama `ClassDB` kaydıyla bağlı tutulan sınıflardır.
 3. **Sınıf kaydı kısıtlama** (`build_profile` ile kullanılmayan sınıfları devre dışı bırakma) — Godot'un kendi
    mekanizması; 2D fizik/navigasyon/animasyon ağacı vb.
 4. **thirdparty**: mbedtls (ağ yok), zstd/minizip gereksiz olabilir — küçük kazanç (< 0.8 MB).
+
+## Budama sonuçları
+
+| Adım | EBOOT.PBP | ELF toplam | Heap peak (120. kare) |
+|---|---|---|---|
+| Spike (başlangıç) | 21 379 644 B (20.39 MB) | 21.31 MB | 11.66 MB |
+| 3b: `disable_advanced_gui=yes` | 19 364 060 B (18.47 MB) | 19.38 MB | 10.73 MB |

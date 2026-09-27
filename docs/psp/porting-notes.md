@@ -23,3 +23,4 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | platform/psp/psp_logger.* | Godot logger → `psp_log_raw` (stdout + devctl) | Headless PPSSPP yalnızca devctl çıktısını gösterir |
 | platform/psp/godot_psp.cpp | Cihaz kökü `umd0:` → `umd0:/` | libcglue `chdir("umd0:")` ENOTDIR verir |
 | platform/psp/os_psp.h | `get_executable_path()` = argv[0] | OS_Unix'te PSP için uygulama yok |
+| platform/psp/detect.py | `disable_advanced_gui=True` | EBOOT −2.0 MB, heap −0.9 MB; demo gelişmiş GUI kullanmıyor |
