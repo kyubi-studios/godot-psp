@@ -1,6 +1,7 @@
 #include "os_psp.h"
 
 #include "display_server_psp.h"
+#include "drivers/psp_gu/psp_gu.h"
 #include "psp_exit.h"
 #include "psp_log.h"
 #include "psp_logger.h"
@@ -59,15 +60,16 @@ void OS_PSP::run() {
 		if (Main::iteration()) {
 			break;
 		}
-		// Faz 1: dummy renderer swap_buffers çağırmaz; vblank beklemesini burada yapıyoruz.
-		// Faz 2'de PSP GU renderer'ı end_frame'de sceGuSwapBuffers + vblank yapacak ve bu çağrı oraya taşınacak.
-		DisplayServer::get_singleton()->swap_buffers();
 		frame++;
 		if ((frame % 60) == 0) {
 			uint32_t used, peak;
 			psp_mem_stats(used, peak);
-			psp_log("[PSP] frame %d mem=%u peak=%u t=%llu", frame, (unsigned)used, (unsigned)peak,
-					(unsigned long long)get_ticks_msec());
+			psp_log("[PSP] frame %d mem=%u peak=%u t=%llu gu_frames=%u scenes=%u draws=%u", frame, (unsigned)used, (unsigned)peak,
+					(unsigned long long)get_ticks_msec(), (unsigned)PSPGU::stats.frames, (unsigned)PSPGU::stats.scenes, (unsigned)PSPGU::stats.draws);
+		}
+		if (screenshot_at_frame > 0 && frame == screenshot_at_frame) {
+			psp_screenshot();
+			psp_log("[PSP] screenshot frame=%d", frame);
 		}
 		if (quit_after_frames > 0 && frame == quit_after_frames) {
 			psp_request_exit(); // HOME → Çık ile aynı yol (exit callback → close request → SceneTree quit)

@@ -19,6 +19,20 @@ PSP_MAIN_THREAD_STACK_SIZE_KB(512);
 
 int psp_selftest();
 
+// <dir>/<name> dosyasındaki tamsayı; dosya yoksa -1.
+static int psp_read_int_file(const char *p_dir, const char *p_name) {
+	char path[300];
+	snprintf(path, sizeof(path), "%s%s%s", p_dir, p_dir[strlen(p_dir) - 1] == '/' ? "" : "/", p_name);
+	SceUID fd = sceIoOpen(path, PSP_O_RDONLY, 0);
+	if (fd < 0) {
+		return -1;
+	}
+	char num[16] = {};
+	sceIoRead(fd, num, sizeof(num) - 1);
+	sceIoClose(fd);
+	return atoi(num);
+}
+
 int main(int argc, char *argv[]) {
 	// newlib free() heap'i sbrk ile küçültmesin: arena monoton kalır ve gerçek peak (high-water) olur.
 	mallopt(M_TRIM_THRESHOLD, 0x7fffffff);
@@ -53,18 +67,11 @@ int main(int argc, char *argv[]) {
 		return fails;
 	}
 
-	// Test: oyun klasöründe "psp_quit_after_frames" dosyası varsa içindeki kare sayısından sonra çık.
-	{
-		char path[300];
-		snprintf(path, sizeof(path), "%s%spsp_quit_after_frames", game_dir, game_dir[strlen(game_dir) - 1] == '/' ? "" : "/");
-		SceUID fd = sceIoOpen(path, PSP_O_RDONLY, 0);
-		if (fd >= 0) {
-			char num[16] = {};
-			sceIoRead(fd, num, sizeof(num) - 1);
-			sceIoClose(fd);
-			os.quit_after_frames = atoi(num);
-			psp_log("[PSP] quit_after_frames=%d", os.quit_after_frames);
-		}
+	// Test kancaları: oyun klasöründeki "psp_quit_after_frames" / "psp_screenshot_at_frame" dosyaları.
+	os.quit_after_frames = psp_read_int_file(game_dir, "psp_quit_after_frames");
+	os.screenshot_at_frame = psp_read_int_file(game_dir, "psp_screenshot_at_frame");
+	if (os.quit_after_frames > 0) {
+		psp_log("[PSP] quit_after_frames=%d", os.quit_after_frames);
 	}
 
 	char *args[] = {

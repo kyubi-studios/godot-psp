@@ -5,7 +5,7 @@
 #include "psp_log.h"
 
 #include "core/input/input.h"
-#include "servers/rendering/dummy/rasterizer_dummy.h"
+#include "drivers/psp_gu/rasterizer_psp.h"
 
 #include <pspctrl.h>
 #include <pspdisplay.h>
@@ -26,7 +26,7 @@ Vector<String> DisplayServerPSP::get_rendering_drivers_func() {
 
 DisplayServer *DisplayServerPSP::create_func(const String &, DisplayServerEnums::WindowMode, DisplayServerEnums::VSyncMode, uint32_t, const Vector2i *, const Vector2i &, int, DisplayServerEnums::Context, int64_t, Error &r_error) {
 	r_error = OK;
-	RasterizerDummy::make_current();
+	RasterizerPSP::make_current();
 	return memnew(DisplayServerPSP());
 }
 

@@ -33,3 +33,8 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | platform/psp/godot_psp.cpp | `mallopt(M_TRIM_THRESHOLD, max)` | Arena küçülmesin; `mallinfo().arena` gerçek peak olsun (inceleme I3) |
 | platform/psp/psp_paths.cpp | `psp_game_dir` boş/NULL/eğik çizgisiz argv[0] → "." | Sınır dışı okuma (inceleme I5) |
 | tools/psp/run_test.sh (+ known_errors.txt) | Godot `ERROR:` satırları testi düşürür; `RUN_TEST_EXPECT_EXIT=1` zaman aşımını hata sayar | Sessiz hatalar ve çıkışta takılma yakalanır (inceleme I1/I4) |
+| drivers/psp_gu/* (+ drivers/SCsub) | PSP GE renderer: `RasterizerPSP : RasterizerDummy`, GU bağlamı (5650 fb×2, 16-bit z, 2×64 KB liste) | Faz 2 |
+| drivers/psp_gu/storage/texture_storage_psp.* | Gerçek render target (boyut + temizleme isteği) | Dummy boş RID döndürür → viewport çizimi atlanır |
+| drivers/psp_gu/rasterizer_scene_psp.* | `RenderSceneBuffersPSP`; render_scene temizleme isteğini tüketir | RendererSceneCull null buffer'da sessizce döner; viewport 3D'den sonra temizler |
+| platform/psp/display_server_psp.h | `can_any_window_draw`/`window_can_draw`=true, tam ekran, 60 Hz | Headless tabanı "çizilemez" bildirir → Main hiç çizmez |
+| platform/psp/os_psp.cpp | `swap_buffers()` çağrısı kaldırıldı; `psp_screenshot_at_frame` test kancası | Vblank + swap artık `RasterizerPSP::end_frame`'de |

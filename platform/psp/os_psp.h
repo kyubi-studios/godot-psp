@@ -13,7 +13,8 @@ protected:
 	bool _check_internal_feature_support(const String &p_feature) override;
 
 public:
-	int quit_after_frames = -1; // --psp-quit-after-frames=N (test için)
+	int quit_after_frames = -1; // psp_quit_after_frames dosyası (test için)
+	int screenshot_at_frame = -1; // psp_screenshot_at_frame dosyası (test için): o kareden sonra ekran görüntüsü
 
 	String get_name() const override { return "PSP"; }
 	String get_distribution_name() const override { return "PSP"; }
