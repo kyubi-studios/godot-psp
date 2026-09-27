@@ -1,3 +1,12 @@
+> [!NOTE]
+> **This is a fork: Godot 4.7.2 ported to the Sony PSP.**
+> 3D, 2D/UI, text and GDScript made in the regular Godot 4.7 editor run on real PSP hardware, through a new
+> fixed-function renderer for the PSP GE (`drivers/psp_gu`) and a PSP platform layer (`platform/psp`).
+> See **[docs/psp/README.md](docs/psp/README.md)** for how it works, how to build, and its limitations.
+> The original Godot README follows below, unchanged.
+>
+> ![Godot 4 on PSP](docs/psp/demo_screenshot.png)
+
 # Godot Engine
 
 <p align="center">

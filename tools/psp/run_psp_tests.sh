@@ -74,8 +74,8 @@ psp_scene_test label 30 40 --region-has 20,20,300,80,255,255,255,40 --region-has
 # GDScript: _ready (lambda/map/reduce) ve _process ile kutuyu hareket ettirir (30. karede x = 20 + 30*4 = 140).
 psp_scene_test gdscript 30 40 --rgb 160,120,0,255,0,16 --rgb 40,120,0,0,0,16
 grep -q '\[GD\] ready sum=84' bin/psp_tests/gdscript/test.log && grep -q '\[GD\] frame30 box_x=140' bin/psp_tests/gdscript/test.log && echo "[psp_tests] gdscript output PASS" || { echo "[psp_tests] gdscript output FAIL"; rc=1; }
-# 3D demo (../psp_demo3d, Godot 4.7 editörüyle export edilen game.pck).
-DEMO="$(cd .. && pwd)/psp_demo3d"
+# 3D demo (misc/psp/demo3d, exported with the Godot 4.7 editor as game.pck).
+DEMO="$(pwd)/misc/psp/demo3d"
 if [ -d "$DEMO" ]; then
   if tools/psp/export_pck.sh "$DEMO" bin/psp_tests/demo_game.pck; then
     tools/psp/stage_game.sh bin/psp_tests/demo_game.pck bin/psp_tests/demo >/dev/null 2>&1
