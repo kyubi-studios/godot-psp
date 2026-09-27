@@ -6,5 +6,10 @@ Import("env")
 env.add_source_files(env.servers_sources, "*.cpp")
 
 SConscript("dummy/SCsub")
-SConscript("renderer_rd/SCsub")
+# PSP gibi RenderingDevice renderer'ı olmayan platformlar RD tabanlı renderer'ı derlemez.
+if not env.get("disable_renderer_rd", False):
+    SConscript("renderer_rd/SCsub")
+else:
+    # rendering_shader_container.cpp (RenderingDevice'ın parçası) hâlâ SPIR-V reflection kullanır.
+    SConscript("renderer_rd/spirv-reflect/SCsub")
 SConscript("storage/SCsub")

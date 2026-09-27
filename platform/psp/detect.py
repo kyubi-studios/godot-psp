@@ -86,6 +86,9 @@ def configure(env: "SConsEnvironment"):
     # pspdev newlib'de olmayan POSIX başlıkları için başarısız dönen yedekler (dlfcn.h, poll.h).
     env.Append(CPPPATH=["#platform/psp/posix_shim"])
     env.Append(CPPPATH=[os.path.join(psp_sdk, "include"), os.path.join(pspdev, "psp", "include")])
+    # Vulkan/RD renderer'ı (servers/rendering/renderer_rd) PSP'de kullanılmaz; derlenmez.
+    env["disable_renderer_rd"] = True
+    env.Append(CPPDEFINES=["RENDERER_RD_DISABLED"])
     env.Append(CPPDEFINES=["PSP_ENABLED", "UNIX_ENABLED", "UNIX_SOCKET_UNAVAILABLE", "_PSP_FW_VERSION=600", "NO_SAFE_CAST"])
     # GCC MIPS hedefi "mips" makrosunu (=1) tanımlar; alan/değişken adlarıyla çakışır.
     # int32_t/uint32_t'yi int/unsigned int yap (bkz. psp_stdint_fix.h).

@@ -67,3 +67,15 @@ kullanılmayan ama `ClassDB` kaydıyla bağlı tutulan sınıflardır.
 |---|---|---|---|
 | Spike (başlangıç) | 21 379 644 B (20.39 MB) | 21.31 MB | 11.66 MB |
 | 3b: `disable_advanced_gui=yes` | 19 364 060 B (18.47 MB) | 19.38 MB | 10.73 MB |
+| 3c: `renderer_rd` derlenmez (`RENDERER_RD_DISABLED`) | 19 277 708 B (18.38 MB) | 19.30 MB | 10.72 MB |
+
+### 3c bulgusu: bağlama sonrası kodun dağılımı
+
+`renderer_rd`'yi çıkarmak yalnızca 86 KB kazandırdı — `--gc-sections` onu zaten büyük ölçüde atıyordu
+(bağlama öncesi .o boyutları yanıltıcı). Linker map'ine göre kalan 19.7 MB kod yüzlerce dosyaya yayılmış;
+en büyükleri: `variant_call` 885 KB, `rendering_device` 579 KB, `font` 495 KB, `rendering_server` 484 KB,
+`register_scene_types` 345 KB, `animation` 335 KB, `tile_set` 280 KB, `shader_language` 257 KB,
+`text_server*` 456 KB, `particle_process_material` 156 KB, `popup_menu`/`window`/`control` ~510 KB.
+Bunlar `ClassDB` kaydıyla bağlı tutulur. Sonraki büyük kazanç: Godot'un **build profile** mekanizmasıyla
+kullanılmayan sınıfları (TileSet, Animation*, ParticleProcessMaterial, Popup/Window GUI, RenderingDevice API'si,
+2D düğümler...) devre dışı bırakmak.

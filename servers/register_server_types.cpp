@@ -62,11 +62,13 @@
 #include "servers/display/native_menu.h"
 #include "servers/movie_writer/movie_writer.h"
 #include "servers/movie_writer/movie_writer_pngwav.h"
+#ifndef RENDERER_RD_DISABLED
 #include "servers/rendering/renderer_rd/framebuffer_cache_rd.h"
 #include "servers/rendering/renderer_rd/storage_rd/render_data_rd.h"
 #include "servers/rendering/renderer_rd/storage_rd/render_scene_buffers_rd.h"
 #include "servers/rendering/renderer_rd/storage_rd/render_scene_data_rd.h"
 #include "servers/rendering/renderer_rd/uniform_set_cache_rd.h"
+#endif
 #include "servers/rendering/rendering_device.h"
 #include "servers/rendering/rendering_device_binds.h"
 #include "servers/rendering/rendering_server.h"
@@ -252,19 +254,22 @@ void register_server_types() {
 
 	GDREGISTER_ABSTRACT_CLASS(RenderData);
 	GDREGISTER_CLASS(RenderDataExtension);
-	GDREGISTER_CLASS(RenderDataRD);
 
 	GDREGISTER_ABSTRACT_CLASS(RenderSceneData);
 	GDREGISTER_CLASS(RenderSceneDataExtension);
-	GDREGISTER_CLASS(RenderSceneDataRD);
 
 	GDREGISTER_CLASS(RenderSceneBuffersConfiguration);
 	GDREGISTER_ABSTRACT_CLASS(RenderSceneBuffers);
 	GDREGISTER_CLASS(RenderSceneBuffersExtension);
-	GDREGISTER_CLASS(RenderSceneBuffersRD);
 
+
+#ifndef RENDERER_RD_DISABLED
+	GDREGISTER_CLASS(RenderDataRD);
+	GDREGISTER_CLASS(RenderSceneDataRD);
+	GDREGISTER_CLASS(RenderSceneBuffersRD);
 	GDREGISTER_CLASS(FramebufferCacheRD);
 	GDREGISTER_CLASS(UniformSetCacheRD);
+#endif
 
 	GDREGISTER_CLASS(CameraFeed);
 
