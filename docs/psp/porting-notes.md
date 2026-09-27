@@ -38,3 +38,6 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | drivers/psp_gu/rasterizer_scene_psp.* | `RenderSceneBuffersPSP`; render_scene temizleme isteğini tüketir | RendererSceneCull null buffer'da sessizce döner; viewport 3D'den sonra temizler |
 | platform/psp/display_server_psp.h | `can_any_window_draw`/`window_can_draw`=true, tam ekran, 60 Hz | Headless tabanı "çizilemez" bildirir → Main hiç çizmez |
 | platform/psp/os_psp.cpp | `swap_buffers()` çağrısı kaldırıldı; `psp_screenshot_at_frame` test kancası | Vblank + swap artık `RasterizerPSP::end_frame`'de |
+| drivers/psp_gu/storage/mesh_storage_psp.* | GE vertex formatı (16-bit poz. AABB ölçekli, 8-bit normal, 16-bit UV, ops. 8888 renk, 16-bit indeks); Godot dizileri saklanmaz; `mesh_get_surface` yalnızca meta veri | Bellek; `surface_get_arrays` PSP'de boş döner |
+| drivers/psp_gu/storage/material_storage_psp.* | ShaderLanguage derleyicisi yok; BaseMaterial3D kodundan bayrak çıkarımı; whitelist parametreler | CPU/RAM |
+| drivers/psp_gu/storage/utilities_psp.* | Base type/free yönlendirme | PSP depoları |

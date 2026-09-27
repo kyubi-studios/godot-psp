@@ -2,7 +2,10 @@
 
 #include "psp_gu.h"
 #include "rasterizer_scene_psp.h"
+#include "storage/material_storage_psp.h"
+#include "storage/mesh_storage_psp.h"
 #include "storage/texture_storage_psp.h"
+#include "storage/utilities_psp.h"
 
 
 void RasterizerPSP::initialize() {
@@ -22,6 +25,12 @@ RasterizerPSP::RasterizerPSP() {
 	// Önce dummy örneklerini sil (yıkıcıları singleton'ları sıfırlar), sonra PSP sürümlerini kur.
 	memdelete(scene);
 	memdelete(texture_storage);
-	scene = memnew(RasterizerScenePSP);
+	memdelete(mesh_storage);
+	memdelete(material_storage);
+	memdelete(utilities);
+	utilities = memnew(RendererPSP::Utilities);
 	texture_storage = memnew(RendererPSP::TextureStorage);
+	material_storage = memnew(RendererPSP::MaterialStorage);
+	mesh_storage = memnew(RendererPSP::MeshStorage);
+	scene = memnew(RasterizerScenePSP);
 }

@@ -27,5 +27,7 @@ psp_scene_test() {
   RUN_TEST_EXPECT_EXIT=1 tools/psp/run_test.sh "bin/psp_tests/$name" 40 "\[PSP\] screenshot frame=$ss" '\[PSP\] exit clean' -- "$@" || rc=1
 }
 psp_scene_test bg_color 30 40 --rgb 240,136,0,255,0,16 --rgb 5,5,0,255,0,16
+# Kamera z=3'te, 1 birimlik küp: ekranın ortası kırmızı (unshaded), köşeler mavi arka plan.
+psp_scene_test mesh_unshaded 30 40 --rgb 240,136,255,0,0,16 --rgb 5,5,0,0,255,16 --rgb 240,40,0,0,255,16
 echo "[psp_tests] $([ $rc -eq 0 ] && echo ALL PASS || echo FAILURES)"
 exit $rc
