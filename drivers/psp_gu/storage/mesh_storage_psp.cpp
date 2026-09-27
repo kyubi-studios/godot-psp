@@ -70,11 +70,20 @@ void MeshStorage::_update_aabb(Mesh *p_mesh) {
 
 bool MeshStorage::build_surface(const Array &p_arrays, RSE::PrimitiveType p_primitive, const AABB &p_aabb, Surface &r_surface) {
 	ERR_FAIL_COND_V(p_arrays.size() != RSE::ARRAY_MAX, false);
-	if (p_arrays[RSE::ARRAY_VERTEX].get_type() != Variant::PACKED_VECTOR3_ARRAY) {
-		WARN_PRINT_ONCE("PSP: only 3D vertex arrays are supported.");
+	PackedVector3Array positions;
+	if (p_arrays[RSE::ARRAY_VERTEX].get_type() == Variant::PACKED_VECTOR2_ARRAY) {
+		// 2D mesh (Polygon2D, MeshInstance2D): z = 0 düzleminde 3D pozisyon.
+		const PackedVector2Array p2 = p_arrays[RSE::ARRAY_VERTEX];
+		positions.resize(p2.size());
+		for (int i = 0; i < p2.size(); i++) {
+			positions.write[i] = Vector3(p2[i].x, p2[i].y, 0.0f);
+		}
+	} else if (p_arrays[RSE::ARRAY_VERTEX].get_type() == Variant::PACKED_VECTOR3_ARRAY) {
+		positions = p_arrays[RSE::ARRAY_VERTEX];
+	} else {
+		WARN_PRINT_ONCE("PSP: unsupported vertex array type.");
 		return false;
 	}
-	const PackedVector3Array positions = p_arrays[RSE::ARRAY_VERTEX];
 	const PackedVector3Array normals = p_arrays[RSE::ARRAY_NORMAL];
 	const PackedVector2Array uvs = p_arrays[RSE::ARRAY_TEX_UV];
 	const PackedColorArray colors = p_arrays[RSE::ARRAY_COLOR];

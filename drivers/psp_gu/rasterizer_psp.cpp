@@ -1,6 +1,7 @@
 #include "rasterizer_psp.h"
 
 #include "psp_gu.h"
+#include "rasterizer_canvas_psp.h"
 #include "rasterizer_scene_psp.h"
 #include "storage/light_storage_psp.h"
 #include "storage/material_storage_psp.h"
@@ -25,6 +26,8 @@ void RasterizerPSP::end_frame(bool p_present) {
 RasterizerPSP::RasterizerPSP() {
 	// Önce dummy örneklerini sil (yıkıcıları singleton'ları sıfırlar), sonra PSP sürümlerini kur.
 	memdelete(scene);
+	memdelete(canvas);
+	canvas = memnew(RasterizerCanvasPSP);
 	memdelete(texture_storage);
 	memdelete(mesh_storage);
 	memdelete(material_storage);

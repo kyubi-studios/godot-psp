@@ -426,6 +426,10 @@ void RasterizerScenePSP::render_scene(const Ref<RenderSceneBuffers> &p_render_bu
 		return;
 	}
 	PSPGU::stats.scenes++;
+	// 2D çizimi derinliği/kırpmayı kapatmış olabilir.
+	sceGuEnable(GU_DEPTH_TEST);
+	sceGuDepthFunc(GU_GEQUAL);
+	sceGuDepthMask(GU_FALSE);
 
 	Color bg = _background_color(p_environment);
 	PSPGU::clear(PSPGU::color_to_abgr(bg.r, bg.g, bg.b, 1.0f));

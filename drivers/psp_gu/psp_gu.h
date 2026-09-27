@@ -31,6 +31,9 @@ bool in_frame();
 void ensure_list_space(int p_bytes);
 constexpr int LIST_MARGIN = 4096;
 
+// Kare içi geçici bellek (display list içinden; kare sonunda geçersiz). Liste yeri önceden sağlanır.
+void *frame_alloc(int p_bytes);
+
 // ABGR8888 (PSP sırası) renkle renk ve derinlik buffer'ını temizle.
 void clear(uint32_t p_abgr);
 

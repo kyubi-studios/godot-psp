@@ -60,6 +60,12 @@ void ensure_list_space(int p_bytes) {
 	stats.list_flushes++;
 }
 
+void *frame_alloc(int p_bytes) {
+	const int bytes = (p_bytes + 15) & ~15;
+	ensure_list_space(bytes + 64);
+	return sceGuGetMemory(bytes);
+}
+
 bool in_frame() {
 	return frame_open;
 }

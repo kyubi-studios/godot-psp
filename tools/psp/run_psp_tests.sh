@@ -58,6 +58,9 @@ psp_scene_test many_lights 30 40 --chgt 240,136,1,0,40
 psp_scene_test shader_material 30 40 --rgb 240,136,255,255,255,24
 # Yalnızca pozisyonlu mesh + ışıklı materyal: normal yok → ışıksız (albedo sarı) çizilir.
 psp_scene_test position_only 30 40 --rgb 240,150,255,255,0,24 --rgb 5,5,0,0,255,16
+# 2D canvas: ColorRect (20..120, 20..70) kırmızı; 64x64 dama Sprite2D merkez (300,150): sol üst beyaz, sağ üst siyah;
+# yeşil Polygon2D üçgen; arka plan varsayılan temizleme rengi (0,0,0.5).
+psp_scene_test canvas_basic 30 40 --rgb 70,45,255,0,0,16 --rgb 284,134,255,255,255,16 --rgb 316,134,0,0,0,16 --rgb 90,230,0,255,0,16 --rgb 450,250,0,0,128,16
 # 3D demo (../psp_demo3d, Godot 4.7 editörüyle export edilen game.pck).
 DEMO="$(cd .. && pwd)/psp_demo3d"
 if [ -d "$DEMO" ]; then
