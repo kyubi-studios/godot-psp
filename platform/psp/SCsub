@@ -9,6 +9,8 @@ psp_files = [
     "psp_log.cpp",
     "psp_logger.cpp",
     "psp_posix_stubs.cpp",
+    "psp_ctrl_map.cpp",
+    "psp_selftest.cpp",
 ]
 
 prog = env.add_program("#bin/godot", psp_files)

@@ -15,6 +15,8 @@ PSP_MAIN_THREAD_STACK_SIZE_KB(512);
 
 static OS_PSP *g_os = nullptr;
 
+int psp_selftest();
+
 static int psp_exit_callback(int, int, void *) {
 	if (g_os) {
 		g_os->quit_requested = true;
@@ -63,6 +65,27 @@ int main(int argc, char *argv[]) {
 	char game_dir[256];
 	psp_game_dir(argc > 0 ? argv[0] : nullptr, game_dir, sizeof(game_dir));
 	psp_log("[PSP] game_dir=%s", game_dir);
+
+	// Test modu: oyun klasöründe "psp_selftest" dosyası varsa (EBOOT argüman alamaz) ya da --psp-selftest verilmişse.
+	bool selftest = false;
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--psp-selftest") == 0) {
+			selftest = true;
+		}
+	}
+	{
+		char marker[300];
+		snprintf(marker, sizeof(marker), "%s%spsp_selftest", game_dir, game_dir[strlen(game_dir) - 1] == '/' ? "" : "/");
+		SceIoStat st;
+		if (sceIoGetstat(marker, &st) >= 0) {
+			selftest = true;
+		}
+	}
+	if (selftest) {
+		int fails = psp_selftest();
+		sceKernelExitGame();
+		return fails;
+	}
 
 	char *args[] = {
 		(char *)"--path", game_dir,
