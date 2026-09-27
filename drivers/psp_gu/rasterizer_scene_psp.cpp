@@ -33,8 +33,15 @@ static void _to_gu_matrix(const Projection &p_proj, ScePspFMatrix4 &r_m) {
 /* GEOMETRY INSTANCE */
 
 void RasterizerScenePSP::GeometryInstancePSP::pair_light_instance(const RID p_light_instance, RSE::LightType p_light_type, uint32_t p_placement_idx) {
-	if (paired_light_count < MAX_LIGHTS) {
-		paired_lights[paired_light_count++] = p_light_instance;
+	if (p_placement_idx >= (uint32_t)MAX_LIGHTS) {
+		return;
+	}
+	if (p_light_type == RSE::LIGHT_SPOT) {
+		spot_lights[p_placement_idx] = p_light_instance;
+		spot_count = MAX(spot_count, (int)p_placement_idx + 1);
+	} else if (p_light_type == RSE::LIGHT_OMNI) {
+		omni_lights[p_placement_idx] = p_light_instance;
+		omni_count = MAX(omni_count, (int)p_placement_idx + 1);
 	}
 }
 
@@ -131,11 +138,38 @@ void RasterizerScenePSP::_apply_lights(const GeometryInstancePSP *p_instance) {
 		sceGuEnable(GU_LIGHT0 + count);
 		count++;
 	}
-	for (int i = 0; i < p_instance->paired_light_count && count < MAX_LIGHTS; i++) {
-		GULight l;
-		if (!_make_gu_light(p_instance->paired_lights[i], l) || l.type == GU_DIRECTIONAL) {
-			continue;
+	// Omni + spot adayları (her biri RendererSceneCull'ın en iyi 4'ü): nesne merkezindeki yaklaşık katkıya göre
+	// en iyi (4 - directional) tanesi seçilir.
+	struct Candidate {
+		GULight light;
+		float score;
+	};
+	Candidate candidates[MAX_LIGHTS * 2];
+	int ncand = 0;
+	const Vector3 center = p_instance->transformed_aabb.get_center();
+	const RID *lists[2] = { p_instance->omni_lights, p_instance->spot_lights };
+	const int counts[2] = { p_instance->omni_count, p_instance->spot_count };
+	for (int k = 0; k < 2; k++) {
+		for (int i = 0; i < counts[k]; i++) {
+			Candidate &c = candidates[ncand];
+			if (!_make_gu_light(lists[k][i], c.light) || c.light.type == GU_DIRECTIONAL) {
+				continue;
+			}
+			const float d2 = center.distance_squared_to(Vector3(c.light.pos[0], c.light.pos[1], c.light.pos[2]));
+			const uint32_t col = c.light.color;
+			const float intensity = ((col & 0xff) + ((col >> 8) & 0xff) + ((col >> 16) & 0xff)) / 765.0f;
+			c.score = intensity / (c.light.att[0] + c.light.att[2] * d2);
+			ncand++;
 		}
+	}
+	while (count < MAX_LIGHTS && ncand > 0) {
+		int best = 0;
+		for (int i = 1; i < ncand; i++) {
+			if (candidates[i].score > candidates[best].score) {
+				best = i;
+			}
+		}
+		const GULight &l = candidates[best].light;
 		ScePspFVector3 pos = { l.pos[0], l.pos[1], l.pos[2] };
 		sceGuLight(count, l.type, GU_DIFFUSE, &pos);
 		sceGuLightColor(count, GU_DIFFUSE, l.color);
@@ -147,6 +181,7 @@ void RasterizerScenePSP::_apply_lights(const GeometryInstancePSP *p_instance) {
 		}
 		sceGuEnable(GU_LIGHT0 + count);
 		count++;
+		candidates[best] = candidates[--ncand];
 	}
 	for (int i = count; i < MAX_LIGHTS; i++) {
 		sceGuDisable(GU_LIGHT0 + i);
@@ -276,6 +311,9 @@ void RasterizerScenePSP::_draw_item(const DrawItem &p_item) {
 	const Material *mat = (const Material *)p_item.material;
 	const uint32_t flags = p_item.flags;
 
+	// En kötü durum: matris + ışıklar + texture + birkaç çizim komutu (~1 KB).
+	PSPGU::ensure_list_space(1024);
+
 	// Model matrisi: dünya * (yüzeyin 16-bit pozisyon ölçeği).
 	Transform3D model = p_item.instance->transform * Transform3D(Basis::from_scale(surf.pos_half), surf.pos_center);
 	ScePspFMatrix4 m;
@@ -288,13 +326,29 @@ void RasterizerScenePSP::_draw_item(const DrawItem &p_item) {
 	}
 	sceGuColor(PSPGU::color_to_abgr(albedo.r, albedo.g, albedo.b, albedo.a));
 
+	const bool has_vertex_color = (surf.vertex_type & GU_COLOR_8888) != 0;
 	if (flags & SHADER_UNSHADED) {
-		sceGuDisable(GU_LIGHTING);
+		if (has_vertex_color && !(flags & SHADER_VERTEX_COLOR)) {
+			// Işıksız modda GE rengi vertex renginden alır; materyal vertex rengini kullanmıyorsa albedo'yu
+			// "ışıklı, ışıksız, beyaz ambient" ile çıkar: renk = ambient(beyaz) * materyal ambient(albedo).
+			sceGuEnable(GU_LIGHTING);
+			for (int i = 0; i < MAX_LIGHTS; i++) {
+				sceGuDisable(GU_LIGHT0 + i);
+			}
+			sceGuAmbient(0xffffffff);
+			lit_instance = nullptr;
+		} else {
+			sceGuDisable(GU_LIGHTING);
+		}
 	} else {
 		sceGuEnable(GU_LIGHTING);
-		_apply_lights(p_item.instance);
+		sceGuAmbient(ambient_abgr);
+		if (lit_instance != p_item.instance) {
+			_apply_lights(p_item.instance);
+			lit_instance = p_item.instance;
+		}
 	}
-	sceGuColorMaterial((flags & SHADER_VERTEX_COLOR) ? (GU_AMBIENT | GU_DIFFUSE) : 0);
+	sceGuColorMaterial((flags & SHADER_VERTEX_COLOR) && has_vertex_color ? (GU_AMBIENT | GU_DIFFUSE) : 0);
 	const TextureStorage::Texture *tex = nullptr;
 	if (mat && mat->albedo_texture.is_valid()) {
 		tex = static_cast<TextureStorage *>(RSG::texture_storage)->get_psp_texture(mat->albedo_texture);
@@ -340,7 +394,24 @@ void RasterizerScenePSP::_draw_item(const DrawItem &p_item) {
 		sceGuEnable(GU_CULL_FACE);
 	}
 
-	sceGuDrawArray(surf.primitive, surf.vertex_type | GU_TRANSFORM_3D, surf.index_count > 0 ? surf.index_count : surf.vertex_count, surf.indices, surf.vertices);
+	// GE prim komutunun sayı alanı 16 bit: büyük yüzeyler parçalanır (üçgen listesi için 3'ün katı).
+	const int total = surf.index_count > 0 ? surf.index_count : surf.vertex_count;
+	const int chunk = RendererPSP::draw_chunk_size(surf.primitive, total);
+	if (chunk <= 0) {
+		WARN_PRINT_ONCE("PSP: a surface is too large for a single GE draw and cannot be split (strip/fan > 65535); skipped.");
+		return;
+	}
+	for (int start = 0; start < total; start += chunk) {
+		const int n = MIN(chunk, total - start);
+		if (start > 0) {
+			PSPGU::ensure_list_space(64);
+		}
+		if (surf.index_count > 0) {
+			sceGuDrawArray(surf.primitive, surf.vertex_type | GU_TRANSFORM_3D, n, surf.indices + start, surf.vertices);
+		} else {
+			sceGuDrawArray(surf.primitive, surf.vertex_type | GU_TRANSFORM_3D, n, nullptr, (const uint8_t *)surf.vertices + (size_t)start * surf.stride);
+		}
+	}
 	PSPGU::stats.draws_accum++;
 }
 
@@ -377,6 +448,7 @@ void RasterizerScenePSP::render_scene(const Ref<RenderSceneBuffers> &p_render_bu
 
 	_fill_lists(p_instances, p_camera_data->main_transform);
 	bound_texture = nullptr;
+	lit_instance = nullptr;
 
 	sceGuDepthMask(GU_FALSE); // GU: GU_FALSE = derinlik yazılır
 	sceGuDisable(GU_BLEND);

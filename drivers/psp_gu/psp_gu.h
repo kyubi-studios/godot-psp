@@ -26,6 +26,11 @@ void frame_begin();
 void frame_end(bool p_present);
 bool in_frame();
 
+// Display list'te en az p_bytes yer bırakır: liste dolmak üzereyse GE'nin bitirmesini bekleyip aynı buffer'da
+// yeni liste başlatır (GE durumu/matrisler donanımda kalır). Çok sayıda çizimde taşmayı önler.
+void ensure_list_space(int p_bytes);
+constexpr int LIST_MARGIN = 4096;
+
 // ABGR8888 (PSP sırası) renkle renk ve derinlik buffer'ını temizle.
 void clear(uint32_t p_abgr);
 
@@ -38,6 +43,7 @@ struct Stats {
 	uint32_t scenes = 0;
 	uint32_t draws = 0; // son karedeki çizim çağrısı
 	uint32_t draws_accum = 0; // bu karede biriken
+	uint32_t list_flushes = 0; // toplam liste yeniden başlatma
 };
 extern Stats stats;
 

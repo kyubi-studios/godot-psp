@@ -49,3 +49,8 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | platform/psp/psp_behaviors.* | `psp_behavior` metadata: spinner, orbit_camera (C++) | GDScript yok |
 | platform/psp/os_psp.cpp + drivers/psp_gu/psp_gu.cpp | `psp/show_stats` → debug font ile FPS/RAM/draw yazısı (InitEx bir kez, sonra SetBase) | InitEx her çağrıda buffer'ı temizler |
 | tools/psp/export_pck.sh, stage_game.sh (.pck), check_fps.sh | Demo export ve test zinciri | Faz 2 Task 5 |
+| drivers/psp_gu/psp_gu.* | `ensure_list_space`: liste dolmadan GE bitirilip aynı buffer'da yeniden başlatılır | 64 KB liste ~180 ışıklı çizimde taşıyordu (inceleme C1) |
+| drivers/psp_gu/rasterizer_scene_psp.* | Omni/spot yuvaları `placement_idx` ile; çizimde katkıya göre en iyi 4; ışıklar instance başına bir kez | RendererSceneCull yer değiştirmeleri yok sayılıyordu (C2) |
+| drivers/psp_gu/storage/mesh_storage_psp.cpp | Normal `normalize(n / pos_half)` olarak depolanır; `draw_chunk_size` ile >65535 çizim parçalanır | Küp olmayan AABB'de normal bozuluyordu (I1); prim sayı alanı 16 bit (I3) |
+| drivers/psp_gu/rasterizer_scene_psp.cpp | Unshaded + vertex rengi (materyal kullanmıyorsa): ışıklı/ışıksız/beyaz ambient ile albedo | GE ışıksız modda vertex rengini kullanır (I2) |
+| drivers/psp_gu/psp_texture.cpp | Mipmap'li görüntüde hedefe yeten en küçük seviye ayrılır, sonra açılır | Büyük texture'da tam boyut açılması (I4) |

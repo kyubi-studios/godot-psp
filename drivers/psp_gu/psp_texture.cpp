@@ -47,7 +47,31 @@ bool PSPTexture::convert(const Ref<Image> &p_image, PSPTextureData &r_data) {
 	r_data = PSPTextureData();
 	ERR_FAIL_COND_V(p_image.is_null() || p_image->is_empty(), false);
 
-	Ref<Image> img = p_image->duplicate();
+	const int sw = p_image->get_width();
+	const int sh = p_image->get_height();
+	const int w = _nearest_pot(sw, MIN_WIDTH, MAX_SIZE);
+	const int h = _nearest_pot(sh, 1, MAX_SIZE);
+
+	// Bellek: tüm görüntüyü kopyalayıp açmak yerine hedefe yeten en küçük mip seviyesini ayır.
+	Ref<Image> img;
+	if (p_image->has_mipmaps()) {
+		int level = 0;
+		for (int l = 1; l <= p_image->get_mipmap_count(); l++) {
+			int64_t ofs, size;
+			int lw, lh;
+			p_image->get_mipmap_offset_size_and_dimensions(l, ofs, size, lw, lh);
+			if (lw < w || lh < h) {
+				break;
+			}
+			level = l;
+		}
+		int64_t ofs, size;
+		int lw, lh;
+		p_image->get_mipmap_offset_size_and_dimensions(level, ofs, size, lw, lh);
+		img = Image::create_from_data(lw, lh, false, p_image->get_format(), p_image->get_data().slice(ofs, ofs + size));
+	} else {
+		img = p_image->duplicate();
+	}
 	if (img->is_compressed() && img->decompress() != OK) {
 		WARN_PRINT_ONCE("PSP: compressed texture format cannot be decoded; use 'VRAM Uncompressed' or 'Lossless' import.");
 		return false;
@@ -56,12 +80,8 @@ bool PSPTexture::convert(const Ref<Image> &p_image, PSPTextureData &r_data) {
 	if (img->get_format() != Image::FORMAT_RGBA8) {
 		img->convert(Image::FORMAT_RGBA8);
 	}
-	const int sw = img->get_width();
-	const int sh = img->get_height();
-	const int w = _nearest_pot(sw, MIN_WIDTH, MAX_SIZE);
-	const int h = _nearest_pot(sh, 1, MAX_SIZE);
-	if (w != sw || h != sh) {
-		const bool upscale = w >= sw && h >= sh;
+	if (w != img->get_width() || h != img->get_height()) {
+		const bool upscale = w >= img->get_width() && h >= img->get_height();
 		img->resize(w, h, upscale ? Image::INTERPOLATE_NEAREST : Image::INTERPOLATE_BILINEAR);
 	}
 

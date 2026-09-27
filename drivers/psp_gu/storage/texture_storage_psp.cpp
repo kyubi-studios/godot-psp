@@ -37,7 +37,9 @@ void TextureStorage::texture_2d_update(RID p_texture, const Ref<Image> &p_image,
 	PSPTexture::free_data(t->data);
 	if (p_image.is_valid()) {
 		t->format = p_image->get_format();
-		PSPTexture::convert(p_image, t->data);
+		if (!PSPTexture::convert(p_image, t->data)) {
+			WARN_PRINT_ONCE("PSP: a texture update could not be converted; the texture is drawn untextured.");
+		}
 	}
 	total_bytes += t->data.bytes;
 }

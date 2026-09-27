@@ -18,6 +18,7 @@ struct Surface {
 	int vertex_count = 0;
 	int index_count = 0;
 	int primitive = 3; // RSE::PrimitiveType == GU primitive numarası
+	uint32_t stride = 0; // vertex boyutu (byte)
 	uint32_t bytes = 0;
 	RID material;
 	AABB aabb;
@@ -37,6 +38,10 @@ struct Mesh {
 	Dependency dependency;
 };
 
+// GE prim komutu en fazla 65535 eleman çizer. Parça boyutu: listeler için primitive boyutunun katı;
+// strip/fan bölünemez (0 = çizilemez).
+int draw_chunk_size(int p_primitive, int p_count);
+
 class MeshStorage : public RendererDummy::MeshStorage {
 	static inline MeshStorage *psp_singleton = nullptr;
 	mutable RID_Owner<Mesh, true> mesh_owner;
@@ -53,7 +58,7 @@ public:
 	uint32_t get_total_bytes() const { return total_bytes; }
 
 	// Test/araç: Godot dizilerinden GE yüzeyi kur (mesh_add_surface bunu kullanır).
-	bool build_surface(const Array &p_arrays, RSE::PrimitiveType p_primitive, const AABB &p_aabb, Surface &r_surface);
+	static bool build_surface(const Array &p_arrays, RSE::PrimitiveType p_primitive, const AABB &p_aabb, Surface &r_surface);
 
 	RID mesh_allocate() override;
 	void mesh_initialize(RID p_rid) override;

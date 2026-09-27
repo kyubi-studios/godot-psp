@@ -39,6 +39,14 @@ psp_scene_test alpha_blend 30 40 --rgb 240,136,128,0,128,32 --rgb 5,5,0,0,255,16
 psp_scene_test fog 30 40 --rgb 240,136,255,255,255,80
 # 2x2 dama texture'lı düzlem (nearest): sol üst kırmızı, sağ üst yeşil, sol alt yeşil.
 psp_scene_test textured 30 40 --rgb 210,106,255,0,0,24 --rgb 270,106,0,255,0,24 --rgb 210,166,0,255,0,24 --rgb 5,5,0,0,255,16
+# İnceleme düzeltmeleri (Faz 2 final):
+# Vertex rengi olan mesh + unshaded kırmızı materyal (vertex_color_use_as_albedo yok) → albedo kırmızı görünmeli.
+psp_scene_test vertex_color 30 40 --rgb 240,150,255,0,0,24 --rgb 5,5,0,0,255,16
+# 900 ayrı ışıklı çizim: display list (64 KB) taşmadan hepsi çizilmeli.
+psp_scene_test stress_draws 60 70 --nonblack 176,100 --nonblack 303,172
+grep -qE '\[PSP\] frame 60 .*draws=900$' bin/psp_tests/stress_draws/test.log && echo "[psp_tests] stress draws=900 PASS" || { echo "[psp_tests] stress draws FAIL"; rc=1; }
+# ~196k indeksli küre (tek çizimde > 65535): alt/üst kutuplar dahil tamamı kırmızı.
+psp_scene_test big_sphere 30 40 --rgb 240,136,255,0,0,24 --rgb 240,117,255,0,0,24 --rgb 240,155,255,0,0,24 --rgb 5,5,0,0,255,16
 # 3D demo (../psp_demo3d, Godot 4.7 editörüyle export edilen game.pck).
 DEMO="$(cd .. && pwd)/psp_demo3d"
 if [ -d "$DEMO" ]; then

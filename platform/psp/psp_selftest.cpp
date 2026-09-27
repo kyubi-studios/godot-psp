@@ -3,6 +3,8 @@
 #include "psp_paths.h"
 
 #include "drivers/psp_gu/psp_texture.h"
+#include "drivers/psp_gu/rasterizer_scene_psp.h"
+#include "drivers/psp_gu/storage/mesh_storage_psp.h"
 
 #include <pspgu.h>
 
@@ -129,6 +131,57 @@ int psp_selftest() {
 		}
 		PSPTexture::swizzle((uint8_t *)swz, (const uint8_t *)lin, 32, 8);
 		PSP_CHECK(swz[0] == 0 && swz[7] == 7 && swz[8] == 16 && swz[64] == 8 && swz[127] == 127, "tex swizzle blocks");
+	}
+
+	// Işık eşleştirme: RendererSceneCull en iyi 4 omni ve 4 spot'u ayrı tutar, placement_idx ile yer değiştirir (inceleme C2).
+	{
+		RasterizerScenePSP::GeometryInstancePSP gi;
+		RID a = RID::from_uint64(1), b = RID::from_uint64(2), c = RID::from_uint64(3), d = RID::from_uint64(4);
+		RID e = RID::from_uint64(5), sp = RID::from_uint64(6);
+		gi.pair_light_instance(a, RSE::LIGHT_OMNI, 0);
+		gi.pair_light_instance(b, RSE::LIGHT_OMNI, 1);
+		gi.pair_light_instance(c, RSE::LIGHT_OMNI, 2);
+		gi.pair_light_instance(d, RSE::LIGHT_OMNI, 3);
+		gi.pair_light_instance(e, RSE::LIGHT_OMNI, 1); // daha iyi ışık 1. yuvayı değiştirir
+		gi.pair_light_instance(sp, RSE::LIGHT_SPOT, 0);
+		PSP_CHECK(gi.omni_count == 4 && gi.omni_lights[1] == e && gi.omni_lights[0] == a, "light pair replace by placement");
+		PSP_CHECK(gi.spot_count == 1 && gi.spot_lights[0] == sp, "spot kept separately from 4 omnis");
+		gi.clear_light_instances();
+		PSP_CHECK(gi.omni_count == 0 && gi.spot_count == 0, "light pair clear");
+	}
+
+	// Normaller: model matrisi yüzey AABB ölçeğini içerir; depolanan normal bunu telafi etmeli (inceleme I1).
+	{
+		Array arrays;
+		arrays.resize(RSE::ARRAY_MAX);
+		const Vector3 n = Vector3(1, 1, 0).normalized();
+		arrays[RSE::ARRAY_VERTEX] = PackedVector3Array({ Vector3(-1, -0.1, -1), Vector3(1, 0.1, 1), Vector3(1, -0.1, -1) });
+		arrays[RSE::ARRAY_NORMAL] = PackedVector3Array({ n, n, n });
+		RendererPSP::Surface surf;
+		const bool ok = RendererPSP::MeshStorage::build_surface(arrays, RSE::PRIMITIVE_TRIANGLES, AABB(Vector3(-1, -0.1, -1), Vector3(2, 0.2, 2)), surf);
+		PSP_CHECK(ok, "thin surface builds");
+		if (ok) {
+			const int8_t *sn = (const int8_t *)surf.vertices; // düzen: normal (3+1) sonra pozisyon
+			const Vector3 world = (Vector3(sn[0], sn[1], sn[2]) / 127.0f * surf.pos_half).normalized();
+			PSP_CHECK(world.distance_to(n) < 0.05f, "normal survives non-uniform AABB scale");
+			free(surf.vertices);
+			free(surf.indices);
+		}
+	}
+
+	// Büyük mipmap'li texture: dönüştürme tam boyutu açmamalı (inceleme I4).
+	{
+		Ref<Image> big = Image::create_empty(1024, 1024, true, Image::FORMAT_RGBA8);
+		big->fill(Color(0.5, 0.5, 0.5, 1));
+		uint32_t u0, p0, u1, p1;
+		psp_mem_stats(u0, p0);
+		PSPTextureData td;
+		const bool ok = PSPTexture::convert(big, td);
+		psp_mem_stats(u1, p1);
+		PSP_CHECK(ok && td.width == 256 && td.height == 256, "big mipmapped texture -> 256");
+		PSP_CHECK(p1 - p0 < 2 * 1024 * 1024, "big texture conversion peak < 2 MB");
+		psp_log("[PSP] selftest big texture peak delta=%u", (unsigned)(p1 - p0));
+		PSPTexture::free_data(td);
 	}
 
 	psp_log("[PSP] selftest done fails=%d", fails);

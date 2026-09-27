@@ -34,14 +34,20 @@ public:
 
 	class GeometryInstancePSP : public RenderGeometryInstanceBase {
 	public:
-		RID paired_lights[MAX_LIGHTS];
-		int paired_light_count = 0;
+		// RendererSceneCull en iyi 4 omni ve 4 spot'u ayrı tutar; placement_idx yuvayı belirtir.
+		RID omni_lights[MAX_LIGHTS];
+		RID spot_lights[MAX_LIGHTS];
+		int omni_count = 0;
+		int spot_count = 0;
 
 		void _mark_dirty() override {}
 		void set_use_lightmap(RID p_lightmap_instance, const Rect2 &p_lightmap_uv_scale, int p_lightmap_slice_index) override {}
 		void set_lightmap_capture(const Color *p_sh9) override {}
 		void pair_light_instance(const RID p_light_instance, RSE::LightType p_light_type, uint32_t p_placement_idx) override;
-		void clear_light_instances() override { paired_light_count = 0; }
+		void clear_light_instances() override {
+			omni_count = 0;
+			spot_count = 0;
+		}
 		void pair_reflection_probe_instances(const RID *p_reflection_probe_instances, uint32_t p_reflection_probe_instance_count) override {}
 		void pair_decal_instances(const RID *p_decal_instances, uint32_t p_decal_instance_count) override {}
 		void pair_voxel_gi_instances(const RID *p_voxel_gi_instances, uint32_t p_voxel_gi_instance_count) override {}
@@ -89,6 +95,7 @@ private:
 
 	bool _make_gu_light(RID p_light_instance, GULight &r_light) const;
 	void _apply_lights(const GeometryInstancePSP *p_instance);
+	const GeometryInstancePSP *lit_instance = nullptr; // son ışıkları gönderilen instance (yüzey başına tekrar etmez)
 	void _setup_environment(RID p_environment, const CameraData *p_camera_data);
 	Color _background_color(RID p_environment) const;
 	void _fill_lists(const PagedArray<RenderGeometryInstance *> &p_instances, const Transform3D &p_camera);

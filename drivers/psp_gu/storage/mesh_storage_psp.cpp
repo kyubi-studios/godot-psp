@@ -27,6 +27,23 @@ static inline uint32_t _align(uint32_t p_offset, uint32_t p_align) {
 	return (p_offset + p_align - 1) & ~(p_align - 1);
 }
 
+int RendererPSP::draw_chunk_size(int p_primitive, int p_count) {
+	const int max_count = 65535;
+	if (p_count <= max_count) {
+		return MAX(p_count, 1);
+	}
+	switch (p_primitive) {
+		case RSE::PRIMITIVE_POINTS:
+			return max_count;
+		case RSE::PRIMITIVE_LINES:
+			return max_count - (max_count % 2);
+		case RSE::PRIMITIVE_TRIANGLES:
+			return max_count - (max_count % 3);
+		default:
+			return 0;
+	}
+}
+
 void MeshStorage::_free_surface(Surface &p_surface) {
 	if (p_surface.vertices) {
 		free(p_surface.vertices);
@@ -139,10 +156,15 @@ bool MeshStorage::build_surface(const Array &p_arrays, RSE::PrimitiveType p_prim
 			*(uint32_t *)(v + color_off) = c.to_abgr32();
 		}
 		if (has_normal) {
+			// Model matrisi pozisyon ölçeğini (pos_half) içerir ve GE normali bu matrisle dönüştürüp normalize eder;
+			// doğru yönü korumak için ölçeğin tersini önceden uygula.
+			Vector3 nn = normals[i] / half;
+			const float len = nn.length();
+			nn = len > 0.0f ? nn / len : Vector3(0, 1, 0);
 			int8_t *n = (int8_t *)(v + normal_off);
-			n[0] = _to_s8(normals[i].x);
-			n[1] = _to_s8(normals[i].y);
-			n[2] = _to_s8(normals[i].z);
+			n[0] = _to_s8(nn.x);
+			n[1] = _to_s8(nn.y);
+			n[2] = _to_s8(nn.z);
 		}
 		int16_t *p = (int16_t *)(v + pos_off);
 		p[0] = _to_s16((positions[i].x - center.x) / half.x);
@@ -176,6 +198,7 @@ bool MeshStorage::build_surface(const Array &p_arrays, RSE::PrimitiveType p_prim
 	r_surface.vertex_count = vcount;
 	r_surface.index_count = icount;
 	r_surface.primitive = (int)p_primitive;
+	r_surface.stride = stride;
 	r_surface.bytes = stride * vcount + sizeof(uint16_t) * icount;
 	r_surface.aabb = aabb;
 	r_surface.pos_center = center;

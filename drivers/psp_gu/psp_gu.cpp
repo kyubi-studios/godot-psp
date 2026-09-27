@@ -47,6 +47,19 @@ void frame_begin() {
 	frame_open = true;
 }
 
+void ensure_list_space(int p_bytes) {
+	if (!frame_open) {
+		return;
+	}
+	if (sceGuCheckList() + p_bytes + LIST_MARGIN <= LIST_BYTES) {
+		return;
+	}
+	sceGuFinish();
+	sceGuSync(0, 0);
+	sceGuStart(GU_DIRECT, lists[cur_list]);
+	stats.list_flushes++;
+}
+
 bool in_frame() {
 	return frame_open;
 }
