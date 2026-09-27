@@ -6,6 +6,8 @@
 #include <pspgu.h>
 #include <string.h>
 
+#include "core/templates/local_vector.h"
+
 namespace PSPGU {
 
 Stats stats;
@@ -58,6 +60,81 @@ void ensure_list_space(int p_bytes) {
 	sceGuSync(0, 0);
 	sceGuStart(GU_DIRECT, lists[cur_list]);
 	stats.list_flushes++;
+}
+
+struct VramEntry {
+	const void *ram;
+	uint32_t offset;
+	uint32_t size;
+	uint32_t last_frame;
+};
+static LocalVector<VramEntry> vram_entries; // offset'e göre sıralı
+
+static void _vram_remove(uint32_t p_index) {
+	stats.vram_bytes -= vram_entries[p_index].size;
+	vram_entries.remove_at(p_index);
+	stats.vram_textures = vram_entries.size();
+}
+
+// First-fit boşluk; bulunamazsa UINT32_MAX.
+static uint32_t _vram_find_gap(uint32_t p_size, uint32_t &r_insert_at) {
+	uint32_t cursor = VRAM_FREE;
+	for (uint32_t i = 0; i < vram_entries.size(); i++) {
+		if (vram_entries[i].offset - cursor >= p_size) {
+			r_insert_at = i;
+			return cursor;
+		}
+		cursor = (vram_entries[i].offset + vram_entries[i].size + 15) & ~15;
+	}
+	if (VRAM_SIZE - cursor >= p_size) {
+		r_insert_at = vram_entries.size();
+		return cursor;
+	}
+	return UINT32_MAX;
+}
+
+const void *texture_address(const void *p_ram, uint32_t p_bytes) {
+	const uint32_t size = (p_bytes + 15) & ~15;
+	for (VramEntry &e : vram_entries) {
+		if (e.ram == p_ram) {
+			e.last_frame = stats.frames;
+			return (const void *)(uintptr_t)(0x04000000 + e.offset); // texture: mutlak VRAM adresi
+		}
+	}
+	if (size > VRAM_SIZE - VRAM_FREE) {
+		return p_ram;
+	}
+	uint32_t insert_at = 0;
+	uint32_t offset = _vram_find_gap(size, insert_at);
+	while (offset == UINT32_MAX) {
+		// Bu karede kullanılmamış en eski girdiyi at.
+		int victim = -1;
+		for (uint32_t i = 0; i < vram_entries.size(); i++) {
+			if (vram_entries[i].last_frame != stats.frames && (victim < 0 || vram_entries[i].last_frame < vram_entries[victim].last_frame)) {
+				victim = i;
+			}
+		}
+		if (victim < 0) {
+			return p_ram; // hepsi bu karede kullanılıyor: RAM'den oku
+		}
+		_vram_remove(victim);
+		offset = _vram_find_gap(size, insert_at);
+	}
+	// CPU ile önbelleksiz VRAM adresine kopyala (GE henüz bu bölgeyi okumuyor).
+	memcpy((void *)(0x44000000 + offset), p_ram, p_bytes);
+	vram_entries.insert(insert_at, { p_ram, offset, size, stats.frames });
+	stats.vram_bytes += size;
+	stats.vram_textures = vram_entries.size();
+	return (const void *)(uintptr_t)(0x04000000 + offset);
+}
+
+void texture_forget(const void *p_ram) {
+	for (uint32_t i = 0; i < vram_entries.size(); i++) {
+		if (vram_entries[i].ram == p_ram) {
+			_vram_remove(i);
+			return;
+		}
+	}
 }
 
 void *frame_alloc(int p_bytes) {

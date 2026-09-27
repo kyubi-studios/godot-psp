@@ -2,6 +2,7 @@
 #include "psp_log.h"
 #include "psp_paths.h"
 
+#include "drivers/psp_gu/psp_gu.h"
 #include "drivers/psp_gu/psp_texture.h"
 #include "drivers/psp_gu/rasterizer_scene_psp.h"
 #include "drivers/psp_gu/storage/mesh_storage_psp.h"
@@ -182,6 +183,32 @@ int psp_selftest() {
 		PSP_CHECK(p1 - p0 < 2 * 1024 * 1024, "big texture conversion peak < 2 MB");
 		psp_log("[PSP] selftest big texture peak delta=%u", (unsigned)(p1 - p0));
 		PSPTexture::free_data(td);
+	}
+
+	// Texture VRAM önbelleği: LRU, bu karede kullanılanlar atılmaz (GE okuyor olabilir).
+	{
+		static uint8_t blocks[5][16];
+		const uint32_t sz = 300 * 1024; // 4 tanesi ~1.2 MB boş VRAM'e sığar
+		auto in_vram = [](const void *p) { return (uintptr_t)p >= 0x04000000 && (uintptr_t)p < 0x04200000; };
+		const uint32_t saved_frame = PSPGU::stats.frames;
+		PSPGU::stats.frames = 1000;
+		bool all4 = true;
+		for (int i = 0; i < 4; i++) {
+			all4 = all4 && in_vram(PSPGU::texture_address(blocks[i], sz));
+		}
+		PSP_CHECK(all4 && PSPGU::stats.vram_textures == 4, "vram cache holds 4 blocks");
+		PSP_CHECK(!in_vram(PSPGU::texture_address(blocks[4], sz)), "vram full this frame -> RAM fallback");
+		PSPGU::stats.frames = 1001;
+		PSPGU::texture_address(blocks[1], sz); // 1..3 bu karede kullanıldı, 0 en eski
+		PSPGU::texture_address(blocks[2], sz);
+		PSPGU::texture_address(blocks[3], sz);
+		PSP_CHECK(in_vram(PSPGU::texture_address(blocks[4], sz)), "new frame evicts LRU block");
+		PSP_CHECK(!in_vram(PSPGU::texture_address(blocks[0], sz)), "evicted block not resident when rest in use");
+		for (int i = 0; i < 5; i++) {
+			PSPGU::texture_forget(blocks[i]);
+		}
+		PSP_CHECK(PSPGU::stats.vram_textures == 0 && PSPGU::stats.vram_bytes == 0, "vram cache forget");
+		PSPGU::stats.frames = saved_frame;
 	}
 
 	psp_log("[PSP] selftest done fails=%d", fails);

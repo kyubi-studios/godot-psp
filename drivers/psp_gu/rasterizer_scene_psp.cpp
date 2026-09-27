@@ -366,7 +366,7 @@ void RasterizerScenePSP::_draw_item(const DrawItem &p_item) {
 		const PSPTextureData &td = tex->data;
 		if (bound_texture != td.pixels) {
 			sceGuTexMode(td.psm, 0, 0, td.swizzled ? GU_TRUE : GU_FALSE);
-			sceGuTexImage(0, td.width, td.height, td.width, td.pixels);
+			sceGuTexImage(0, td.width, td.height, td.width, PSPGU::texture_address(td.pixels, td.bytes));
 			sceGuTexFlush();
 			bound_texture = td.pixels;
 		}

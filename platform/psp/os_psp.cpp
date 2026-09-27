@@ -84,8 +84,8 @@ void OS_PSP::run() {
 		if ((frame % 60) == 0) {
 			uint32_t used, peak;
 			psp_mem_stats(used, peak);
-			psp_log("[PSP] frame %d mem=%u peak=%u t=%llu gu_frames=%u scenes=%u draws=%u", frame, (unsigned)used, (unsigned)peak,
-					(unsigned long long)get_ticks_msec(), (unsigned)PSPGU::stats.frames, (unsigned)PSPGU::stats.scenes, (unsigned)PSPGU::stats.draws);
+			psp_log("[PSP] frame %d mem=%u peak=%u t=%llu gu_frames=%u scenes=%u draws=%u vram_tex=%u", frame, (unsigned)used, (unsigned)peak,
+					(unsigned long long)get_ticks_msec(), (unsigned)PSPGU::stats.frames, (unsigned)PSPGU::stats.scenes, (unsigned)PSPGU::stats.draws, (unsigned)PSPGU::stats.vram_textures);
 		}
 		if (screenshot_at_frame > 0 && frame == screenshot_at_frame) {
 			psp_screenshot();

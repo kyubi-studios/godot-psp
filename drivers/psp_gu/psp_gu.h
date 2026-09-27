@@ -31,6 +31,14 @@ bool in_frame();
 void ensure_list_space(int p_bytes);
 constexpr int LIST_MARGIN = 4096;
 
+// Texture VRAM önbelleği (VRAM_FREE..2 MB, LRU, first-fit). GE VRAM'den RAM'e göre çok daha hızlı okur.
+// p_ram: texture'ın RAM kopyası (anahtar); dönen işaretçi sceGuTexImage'a verilir (VRAM ya da yer yoksa p_ram).
+// Yalnızca bu karede kullanılmamış girdiler dışarı atılır (GE aynı karede hâlâ okuyor olabilir).
+const void *texture_address(const void *p_ram, uint32_t p_bytes);
+// Texture serbest bırakılırken önbellekten çıkarır.
+void texture_forget(const void *p_ram);
+constexpr uint32_t VRAM_SIZE = 0x200000;
+
 // Kare içi geçici bellek (display list içinden; kare sonunda geçersiz). Liste yeri önceden sağlanır.
 void *frame_alloc(int p_bytes);
 
@@ -47,6 +55,8 @@ struct Stats {
 	uint32_t draws = 0; // son karedeki çizim çağrısı
 	uint32_t draws_accum = 0; // bu karede biriken
 	uint32_t list_flushes = 0; // toplam liste yeniden başlatma
+	uint32_t vram_textures = 0; // VRAM önbelleğindeki texture sayısı
+	uint32_t vram_bytes = 0;
 };
 extern Stats stats;
 

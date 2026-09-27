@@ -1,5 +1,7 @@
 #include "psp_texture.h"
 
+#include "psp_gu.h"
+
 #include <malloc.h>
 #include <pspgu.h>
 #include <pspkernel.h>
@@ -143,6 +145,7 @@ bool PSPTexture::convert(const Ref<Image> &p_image, PSPTextureData &r_data) {
 
 void PSPTexture::free_data(PSPTextureData &r_data) {
 	if (r_data.pixels) {
+		PSPGU::texture_forget(r_data.pixels);
 		free(r_data.pixels);
 	}
 	r_data = PSPTextureData();
