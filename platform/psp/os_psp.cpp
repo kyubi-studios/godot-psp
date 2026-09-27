@@ -2,16 +2,19 @@
 
 #include "display_server_psp.h"
 #include "drivers/psp_gu/psp_gu.h"
+#include "psp_behaviors.h"
 #include "psp_exit.h"
 #include "psp_log.h"
 #include "psp_logger.h"
 
 #include "core/config/project_settings.h"
 #include "core/os/main_loop.h"
+#include "scene/main/scene_tree.h"
 #include "main/main.h"
 #include "servers/display/display_server.h"
 
 #include <pspkernel.h>
+#include <stdio.h>
 #include <psprtc.h>
 
 void OS_PSP::initialize() {
@@ -55,12 +58,29 @@ void OS_PSP::run() {
 	}
 	main_loop->initialize();
 	int frame = 0;
+	PSPBehaviors behaviors;
+	const bool show_stats = GLOBAL_GET("psp/show_stats").booleanize();
+	uint64_t last_ticks = get_ticks_usec();
+	uint64_t stats_ticks = last_ticks;
 	while (true) {
 		DisplayServer::get_singleton()->process_events();
+		const uint64_t now = get_ticks_usec();
+		behaviors.update(Object::cast_to<SceneTree>(main_loop), (now - last_ticks) / 1000000.0);
+		last_ticks = now;
 		if (Main::iteration()) {
 			break;
 		}
 		frame++;
+		if (show_stats && (frame % 30) == 0) {
+			const uint64_t t = get_ticks_usec();
+			uint32_t used, peak;
+			psp_mem_stats(used, peak);
+			char text[96];
+			snprintf(text, sizeof(text), "FPS %d  RAM %.1f/%.1f MB  draws %u", (int)(30000000.0 / MAX(t - stats_ticks, (uint64_t)1) + 0.5),
+					used / 1048576.0f, peak / 1048576.0f, (unsigned)PSPGU::stats.draws);
+			PSPGU::set_overlay_text(text);
+			stats_ticks = t;
+		}
 		if ((frame % 60) == 0) {
 			uint32_t used, peak;
 			psp_mem_stats(used, peak);

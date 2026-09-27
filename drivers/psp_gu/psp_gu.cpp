@@ -71,9 +71,15 @@ static void draw_overlay() {
 		return;
 	}
 	// GE bitti; çizim buffer'ına CPU ile (önbelleksiz VRAM) debug fontuyla yaz.
-	pspDebugScreenInitEx((void *)(0x44000000 + draw_fb), PSP_DISPLAY_PIXEL_FORMAT_565, 0);
-	pspDebugScreenEnableBackColor(0);
-	pspDebugScreenSetTextColor(0xffffffff);
+	// InitEx buffer'ı temizler: yalnızca bir kez, sonra her kare sadece taban adresi değişir.
+	static bool debug_inited = false;
+	if (!debug_inited) {
+		pspDebugScreenInitEx((void *)(0x44000000 + draw_fb), PSP_DISPLAY_PIXEL_FORMAT_565, 0);
+		pspDebugScreenEnableBackColor(0);
+		pspDebugScreenSetTextColor(0xffffffff);
+		debug_inited = true;
+	}
+	pspDebugScreenSetBase((u32 *)(0x44000000 + draw_fb));
 	pspDebugScreenSetXY(0, 0);
 	pspDebugScreenPrintData(overlay, strlen(overlay));
 }

@@ -39,5 +39,21 @@ psp_scene_test alpha_blend 30 40 --rgb 240,136,128,0,128,32 --rgb 5,5,0,0,255,16
 psp_scene_test fog 30 40 --rgb 240,136,255,255,255,80
 # 2x2 dama texture'lı düzlem (nearest): sol üst kırmızı, sağ üst yeşil, sol alt yeşil.
 psp_scene_test textured 30 40 --rgb 210,106,255,0,0,24 --rgb 270,106,0,255,0,24 --rgb 210,166,0,255,0,24 --rgb 5,5,0,0,255,16
+# 3D demo (../psp_demo3d, Godot 4.7 editörüyle export edilen game.pck).
+DEMO="$(cd .. && pwd)/psp_demo3d"
+if [ -d "$DEMO" ]; then
+  if tools/psp/export_pck.sh "$DEMO" bin/psp_tests/demo_game.pck; then
+    tools/psp/stage_game.sh bin/psp_tests/demo_game.pck bin/psp_tests/demo >/dev/null 2>&1
+    echo 120 > bin/psp_tests/demo/psp_screenshot_at_frame; echo 300 > bin/psp_tests/demo/psp_quit_after_frames
+    RUN_TEST_EXPECT_EXIT=1 tools/psp/run_test.sh bin/psp_tests/demo 60 '\[PSP\] main_pack=' '\[PSP\] behaviors spinners=7 cameras=1' '\[PSP\] screenshot frame=120' '\[PSP\] exit clean' -- --rgb 5,5,115,158,217,12 || rc=1
+    tools/psp/check_fps.sh bin/psp_tests/demo/test.log 30 || rc=1
+    peak=$(grep -oE 'peak=[0-9]+' bin/psp_tests/demo/test.log | tail -1 | cut -d= -f2)
+    if [ "${peak:-99999999999}" -le 46137344 ]; then echo "[psp_tests] demo peak $peak <= 44 MB PASS"; else echo "[psp_tests] demo peak $peak FAIL"; rc=1; fi
+  else
+    echo "[psp_tests] demo export FAIL"; rc=1
+  fi
+else
+  echo "[psp_tests] demo SKIPPED ($DEMO yok)"
+fi
 echo "[psp_tests] $([ $rc -eq 0 ] && echo ALL PASS || echo FAILURES)"
 exit $rc

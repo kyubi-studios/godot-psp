@@ -45,3 +45,7 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | drivers/psp_gu/rasterizer_scene_psp.cpp | GE aydınlatma (≤4 ışık/nesne), ambient, doğrusal fog (üstel → yaklaşım), arka yüz kırpma (`GU_CW` = Godot ön yüzü, test ile doğrulandı), saydam sıralama | Faz 2 Task 3 |
 | drivers/psp_gu/psp_texture.* | Image → RGBA8 → en yakın 2^n (8..256) → 5650/5551/4444 → swizzle (yükseklik ≥ 8); orijinal Image saklanmaz | Bellek; `texture_2d_get` boş döner |
 | drivers/psp_gu/storage/texture_storage_psp.* | Texture API (tüm başlatıcılar RID'i başlatır), `texture_replace` veri taşır | Dummy başlatmadığı RID'lerde `texture_free` hata veriyordu |
+| platform/psp/godot_psp.cpp | EBOOT yanında `game.pck` varsa `--main-pack` | Export edilmiş oyunlar |
+| platform/psp/psp_behaviors.* | `psp_behavior` metadata: spinner, orbit_camera (C++) | GDScript yok |
+| platform/psp/os_psp.cpp + drivers/psp_gu/psp_gu.cpp | `psp/show_stats` → debug font ile FPS/RAM/draw yazısı (InitEx bir kez, sonra SetBase) | InitEx her çağrıda buffer'ı temizler |
+| tools/psp/export_pck.sh, stage_game.sh (.pck), check_fps.sh | Demo export ve test zinciri | Faz 2 Task 5 |
