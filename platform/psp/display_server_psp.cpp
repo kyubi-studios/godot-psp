@@ -1,6 +1,7 @@
 #include "display_server_psp.h"
 
 #include "psp_ctrl_map.h"
+#include "psp_exit.h"
 #include "psp_log.h"
 
 #include "core/input/input.h"
@@ -34,6 +35,13 @@ void DisplayServerPSP::register_psp_driver() {
 }
 
 void DisplayServerPSP::process_events() {
+	if (psp_exit_requested() && !close_request_sent) {
+		close_request_sent = true;
+		if (window_event_callback.is_valid()) {
+			window_event_callback.call((int)DisplayServerEnums::WINDOW_EVENT_CLOSE_REQUEST);
+		}
+		psp_log("[PSP] close request sent");
+	}
 	SceCtrlData pad;
 	if (sceCtrlPeekBufferPositive(&pad, 1) <= 0) {
 		return;

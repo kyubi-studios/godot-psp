@@ -13,7 +13,6 @@ protected:
 	bool _check_internal_feature_support(const String &p_feature) override;
 
 public:
-	volatile bool quit_requested = false;
 	int quit_after_frames = -1; // --psp-quit-after-frames=N (test için)
 
 	String get_name() const override { return "PSP"; }

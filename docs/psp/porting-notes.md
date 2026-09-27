@@ -28,3 +28,8 @@ Her satır: `dosya:satır` — değişiklik — neden.
 | servers/register_server_types.cpp | `*RD` sınıf kayıtları `#ifndef RENDERER_RD_DISABLED` | `renderer_rd/` derlenmeyince tanımsız |
 | platform/psp/display_server_psp.* | DisplayServerHeadless tabanlı; sceCtrl → joypad 0, 480×272, vblank | Girdi + vsync |
 | platform/psp/os_psp.cpp (run) | Her iterasyonda `swap_buffers()` (vblank) | Dummy renderer swap etmez; Faz 2'de renderer'a taşınacak |
+| platform/psp/psp_exit.* | Exit callback → global bayrak → DisplayServerPSP `WINDOW_EVENT_CLOSE_REQUEST`; 3 sn watchdog → `sceKernelExitGame` | HOME → Çık açılışta ya da takılmada kaybolmasın; oyun WM_CLOSE_REQUEST alsın (inceleme I1/I2) |
+| platform/psp/psp_wraps.cpp (+ `-Wl,--wrap=malloc,realloc,calloc,getcwd`) | NULL tahsis → `[PSP] FAIL OOM`; getcwd cihaz kökü `umd0:/` | OOM görünür olsun; DirAccessUnix önceki dizine `chdir` edebilsin (inceleme I3/I4) |
+| platform/psp/godot_psp.cpp | `mallopt(M_TRIM_THRESHOLD, max)` | Arena küçülmesin; `mallinfo().arena` gerçek peak olsun (inceleme I3) |
+| platform/psp/psp_paths.cpp | `psp_game_dir` boş/NULL/eğik çizgisiz argv[0] → "." | Sınır dışı okuma (inceleme I5) |
+| tools/psp/run_test.sh (+ known_errors.txt) | Godot `ERROR:` satırları testi düşürür; `RUN_TEST_EXPECT_EXIT=1` zaman aşımını hata sayar | Sessiz hatalar ve çıkışta takılma yakalanır (inceleme I1/I4) |

@@ -1,8 +1,11 @@
 #include "os_psp.h"
+#include "psp_exit.h"
 #include "psp_log.h"
+#include "psp_paths.h"
 
 #include "main/main.h"
 
+#include <malloc.h>
 #include <pspiofilemgr.h>
 #include <pspkernel.h>
 #include <stdio.h>
@@ -14,53 +17,15 @@ PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
 PSP_HEAP_SIZE_KB(-1024);
 PSP_MAIN_THREAD_STACK_SIZE_KB(512);
 
-static OS_PSP *g_os = nullptr;
-
 int psp_selftest();
 
-static int psp_exit_callback(int, int, void *) {
-	if (g_os) {
-		g_os->quit_requested = true;
-	}
-	return 0;
-}
-
-static int psp_callback_thread(SceSize, void *) {
-	int cbid = sceKernelCreateCallback("exit_cb", psp_exit_callback, nullptr);
-	sceKernelRegisterExitCallback(cbid);
-	sceKernelSleepThreadCB();
-	return 0;
-}
-
-static void psp_setup_callbacks() {
-	int thid = sceKernelCreateThread("cb_thread", psp_callback_thread, 0x11, 0x1000, THREAD_ATTR_USER, nullptr);
-	if (thid >= 0) {
-		sceKernelStartThread(thid, 0, nullptr);
-	}
-}
-
-// argv[0]'ın dizini (ör. "ms0:/PSP/GAME/GodotDemo/EBOOT.PBP" → "ms0:/PSP/GAME/GodotDemo").
-static void psp_game_dir(const char *p_argv0, char *r_out, size_t p_size) {
-	strncpy(r_out, p_argv0 ? p_argv0 : "", p_size - 1);
-	r_out[p_size - 1] = 0;
-	char *slash = strrchr(r_out, '/');
-	if (slash) {
-		*slash = 0;
-	}
-	// Cihaz kökü (ör. PPSSPP'nin "umd0:/EBOOT.PBP") → "umd0:/"; chdir("umd0:") başarısız olur.
-	size_t len = strlen(r_out);
-	if (len > 0 && r_out[len - 1] == ':' && len + 1 < p_size) {
-		r_out[len] = '/';
-		r_out[len + 1] = 0;
-	}
-}
-
 int main(int argc, char *argv[]) {
-	psp_setup_callbacks();
+	// newlib free() heap'i sbrk ile küçültmesin: arena monoton kalır ve gerçek peak (high-water) olur.
+	mallopt(M_TRIM_THRESHOLD, 0x7fffffff);
+	psp_exit_setup();
 	psp_log("[PSP] main enter argv0=%s", argc > 0 ? argv[0] : "(none)");
 
 	OS_PSP os;
-	g_os = &os;
 	os.executable_path = String::utf8(argc > 0 ? argv[0] : "");
 
 	char game_dir[256];
@@ -128,6 +93,7 @@ int main(int argc, char *argv[]) {
 	}
 	Main::cleanup();
 	psp_log("[PSP] cleanup done");
+	psp_exit_mark_main_done();
 	sceKernelExitGame();
 	return 0;
 }

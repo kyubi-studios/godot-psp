@@ -19,6 +19,11 @@ for p in "${PATTERNS[@]}"; do
   if ! grep -Eq "$p" "$GAME/test.log"; then echo "[run_test] MISSING: $p"; rc=1; fi
 done
 if grep -q "\[PSP\] FAIL" "$GAME/test.log"; then grep "\[PSP\] FAIL" "$GAME/test.log"; rc=1; fi
+# Godot'un kendi hata satırları (bilinen zararsızlar tools/psp/known_errors.txt'de) testi düşürür.
+ERRS=$(grep -A1 -E "^(USER )?(SCRIPT )?ERROR:" "$GAME/test.log" | grep -vE "^--$" | grep -vFf "$TOOLS/known_errors.txt" | grep -E "^(USER )?(SCRIPT )?ERROR:" || true)
+if [ -n "$ERRS" ]; then echo "[run_test] GODOT ERRORS:"; echo "$ERRS"; rc=1; fi
+# RUN_TEST_EXPECT_EXIT=1: EBOOT kendi çıkmalı; PPSSPP zaman aşımı başarısızlıktır.
+if [ "${RUN_TEST_EXPECT_EXIT:-0}" = "1" ] && grep -q "TIMEOUT" "$GAME/test.log"; then echo "[run_test] TIMEOUT (EBOOT did not exit)"; rc=1; fi
 if [ -f "$WORK/__testfailure.bmp" ]; then
   python3 "$TOOLS/bmp_check.py" "$WORK/__testfailure.bmp" "$GAME/screenshot.png" "${BMPARGS[@]}" || rc=1
 elif [ ${#BMPARGS[@]} -gt 0 ]; then

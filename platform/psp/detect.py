@@ -95,6 +95,8 @@ def configure(env: "SConsEnvironment"):
     env.Append(CCFLAGS=["-include", env.Dir("#platform/psp").abspath + "/psp_stdint_fix.h"])
     env.Append(CCFLAGS=["-Umips", "-G0", "-ffunction-sections", "-fdata-sections"])
     # --gc-sections PSP modül bölümlerini (NID tabloları) silmesin diye KEEP'li linker betiği.
+    # psp_wraps.cpp: OOM izleme ve getcwd cihaz kökü düzeltmesi.
+    env.Append(LINKFLAGS=["-Wl,--wrap=malloc,--wrap=realloc,--wrap=calloc,--wrap=getcwd"])
     env.Append(LINKFLAGS=["-G0", "-Wl,--gc-sections", "-T", env.File("#platform/psp/psp_gc.ld").abspath])
     env.Append(LIBPATH=[os.path.join(psp_sdk, "lib")])
     # libc/libm/libcglue/pspuser/psprtc/pspnet* derleyici specs'inden (*lib) doğru sırayla gelir.

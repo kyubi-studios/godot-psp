@@ -1,6 +1,7 @@
 #include "os_psp.h"
 
 #include "display_server_psp.h"
+#include "psp_exit.h"
 #include "psp_log.h"
 #include "psp_logger.h"
 
@@ -53,7 +54,7 @@ void OS_PSP::run() {
 	}
 	main_loop->initialize();
 	int frame = 0;
-	while (!quit_requested) {
+	while (true) {
 		DisplayServer::get_singleton()->process_events();
 		if (Main::iteration()) {
 			break;
@@ -68,8 +69,8 @@ void OS_PSP::run() {
 			psp_log("[PSP] frame %d mem=%u peak=%u t=%llu", frame, (unsigned)used, (unsigned)peak,
 					(unsigned long long)get_ticks_msec());
 		}
-		if (quit_after_frames > 0 && frame >= quit_after_frames) {
-			break;
+		if (quit_after_frames > 0 && frame == quit_after_frames) {
+			psp_request_exit(); // HOME → Çık ile aynı yol (exit callback → close request → SceneTree quit)
 		}
 	}
 	main_loop->finalize();

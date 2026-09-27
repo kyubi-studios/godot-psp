@@ -79,3 +79,9 @@ en büyükleri: `variant_call` 885 KB, `rendering_device` 579 KB, `font` 495 KB,
 Bunlar `ClassDB` kaydıyla bağlı tutulur. Sonraki büyük kazanç: Godot'un **build profile** mekanizmasıyla
 kullanılmayan sınıfları (TileSet, Animation*, ParticleProcessMaterial, Popup/Window GUI, RenderingDevice API'si,
 2D düğümler...) devre dışı bırakmak.
+
+## Doğrulanmamış (yalnızca gerçek donanımda)
+
+- `ms0:/PSP/GAME/<ad>/EBOOT.PBP` yolu: PPSSPP headless klasörü `umd0:/` olarak bağlar; `ms0:` dalı yalnızca
+  self-test'te `psp_game_dir` birim kontrolüyle doğrulandı.
+- Gerçek firmware'in HOME → Çık sonrası davranışı (watchdog süresi, zorla kapatma).

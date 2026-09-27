@@ -1,0 +1,12 @@
+config_version=5
+
+[application]
+
+config/name="PSP Boot NoQuit"
+run/main_scene="res://main.tscn"
+config/auto_accept_quit=false
+
+[rendering]
+
+renderer/rendering_method="dummy"
+driver/threads/thread_model=0

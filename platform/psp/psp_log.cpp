@@ -49,3 +49,6 @@ void psp_mem_stats(uint32_t &r_used, uint32_t &r_peak) {
 	r_used = (uint32_t)mi.uordblks;
 	r_peak = peak;
 }
+
+volatile bool psp_oom_expected = false;
+volatile int psp_oom_count = 0;
