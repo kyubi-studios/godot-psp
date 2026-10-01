@@ -32,8 +32,10 @@
 #include "studio_editor.h"
 
 #include "core/input/input_event.h"
+#include "core/io/resource_loader.h"
 #include "core/object/callable_mp.h"
 #include "editor/docks/editor_dock_manager.h"
+#include "editor/editor_node.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/studio/studio_drawer.h"
 #include "editor/studio/studio_pages_bar.h"
@@ -45,6 +47,8 @@
 void StudioEditor::register_settings() {
 	EDITOR_DEF("interface/studio/pages/auto_save_on_switch", true);
 	EDITOR_DEF("interface/studio/bottom_drawer/auto_hide", false);
+	EDITOR_DEF("interface/studio/scene_cache/max_scenes", 5);
+	EditorSettings::get_singleton()->add_property_hint(PropertyInfo(Variant::INT, "interface/studio/scene_cache/max_scenes", PROPERTY_HINT_RANGE, "0,32,1"));
 
 	for (int i = 1; i <= PAGE_SHORTCUT_COUNT; i++) {
 		ED_SHORTCUT(vformat("studio/page_%d", i), vformat(TTR("Switch to Layout Page %d"), i), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key(int(Key::KEY_1) + i - 1));
@@ -101,6 +105,9 @@ void StudioEditor::setup(EditorTitleBar *p_title_bar, Control *p_title_right_con
 	// Regions can also be shown by focusing one of their docks, so follow the manager's state.
 	EditorDockManager::get_singleton()->connect("dock_region_visibility_changed", callable_mp(this, &StudioEditor::_update_dock_region_buttons).unbind(2));
 
+	scene_cache.set_capacity(EDITOR_GET("interface/studio/scene_cache/max_scenes"));
+	EditorSettings::get_singleton()->connect("settings_changed", callable_mp(this, &StudioEditor::_editor_settings_changed));
+
 	drawer = memnew(StudioDrawer);
 	drawer->setup(bottom_panel);
 	add_child(drawer);
@@ -139,6 +146,22 @@ void StudioEditor::notify_layout_loaded(const String &p_layout) {
 	if (pages_bar) {
 		pages_bar->notify_layout_loaded(p_layout);
 	}
+}
+
+void StudioEditor::notify_scene_closing(const String &p_path) {
+	if (p_path.is_empty() || scene_cache.get_capacity() == 0) {
+		return;
+	}
+	if (EditorNode::get_singleton() && EditorNode::get_singleton()->is_exiting()) {
+		return;
+	}
+	// The scene's dependencies are still loaded, so this only re-reads the scene file itself.
+	Ref<Resource> scene = ResourceLoader::load(p_path, "", ResourceFormatLoader::CACHE_MODE_REUSE);
+	scene_cache.put(p_path, scene);
+}
+
+void StudioEditor::_editor_settings_changed() {
+	scene_cache.set_capacity(EDITOR_GET("interface/studio/scene_cache/max_scenes"));
 }
 
 void StudioEditor::_layouts_changed() {

@@ -4571,6 +4571,10 @@ void EditorNode::_remove_edited_scene(bool p_change_tab) {
 }
 
 void EditorNode::_remove_scene(int p_idx, bool p_change_tab) {
+	if (studio_editor) { // STUDIO: scene cache
+		studio_editor->notify_scene_closing(editor_data.get_scene_path(p_idx));
+	}
+
 	// Clear icon cache in case some scripts are no longer needed or class icons are outdated.
 	// FIXME: Ideally the cache should never be cleared and only updated on per-script basis, when an icon changes.
 	editor_data.clear_script_icon_cache();

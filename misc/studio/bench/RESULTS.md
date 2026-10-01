@@ -43,3 +43,15 @@ importer on 12 threads (lossless encoding of noise, worst case); ~2.7 s startup;
    also save state; needs an audit).
 4. Phase 2 scene cache: the 3000-node bench scene takes 1.35 s to load, so keeping recently
    closed scenes loaded would make reopening near-instant.
+
+## Scene cache (phase 2), real editor (2026-10-01)
+
+GUI editor, `--verbose`, bench project, `big.tscn` (3000 nodes, 299 textures) opened, closed with
+Ctrl+Shift+W, reopened with Ctrl+Shift+T (`misc/studio/bench`-style harness, X11 key injection):
+
+| Binary | Textures reloaded on reopen | `big.tscn` load on reopen |
+|---|---:|---:|
+| without scene cache (8031cc11b) | 299 | 1375 ms |
+| with scene cache (max_scenes=5) | 0 | 47 ms |
+
+Cost: closing the tab re-reads the scene file while its dependencies are still loaded (37 ms here).

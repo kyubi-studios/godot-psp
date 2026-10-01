@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include "editor/studio/studio_scene_cache.h"
 #include "scene/main/node.h"
 
 class Button;
@@ -56,8 +57,10 @@ class StudioEditor : public Node {
 	Button *left_docks_button = nullptr;
 	Button *right_docks_button = nullptr;
 	StudioDrawer *drawer = nullptr;
+	StudioSceneCache scene_cache;
 
 	void _layouts_changed();
+	void _editor_settings_changed();
 	void _toggle_dock_region(int p_region);
 	void _update_dock_region_buttons();
 	void _update_icons();
@@ -78,6 +81,10 @@ public:
 	void notify_layouts_changed();
 	// Called by EditorNode after the stock "Editor Layout" menu loaded a layout.
 	void notify_layout_loaded(const String &p_layout);
+
+	// Called by EditorNode right before a scene tab is closed, while the scene is still loaded.
+	void notify_scene_closing(const String &p_path);
+	const StudioSceneCache &get_scene_cache() const { return scene_cache; }
 
 	StudioPagesBar *get_pages_bar() const { return pages_bar; }
 
