@@ -40,8 +40,8 @@
 Color StudioThemeColors::base_color(float p_hue, float p_vividness) {
 	const float hue = CLAMP(p_hue, 0.0f, 1.0f);
 	const float vividness = CLAMP(p_vividness, 0.0f, 1.0f);
-	const float saturation = vividness > 0.0f ? 0.12f + 0.35f * vividness : 0.0f;
-	return Color::from_hsv(hue, saturation, 0.16f);
+	const float saturation = vividness > 0.0f ? 0.15f + 0.4f * vividness : 0.0f;
+	return Color::from_hsv(hue, saturation, 0.21f);
 }
 
 Color StudioThemeColors::accent_color(float p_hue, float p_vividness) {
@@ -74,8 +74,46 @@ static Ref<StyleBoxFlat> _make_floating(const Ref<StyleBox> &p_base, const Edito
 	return style;
 }
 
+static Ref<StyleBoxFlat> _duplicate_flat(const Ref<StyleBox> &p_style) {
+	Ref<StyleBoxFlat> flat = p_style;
+	return flat.is_valid() ? Ref<StyleBoxFlat>(flat->duplicate()) : Ref<StyleBoxFlat>(memnew(StyleBoxFlat));
+}
+
+// Dock and editor tabs: a darker header band, with an accent line on top of the selected tab.
+static void _populate_tabs(const Ref<EditorTheme> &p_theme, const EditorThemeManager::ThemeConfiguration &p_config) {
+	Ref<StyleBoxFlat> band = memnew(StyleBoxFlat);
+	band->set_bg_color(p_config.dark_color_2);
+	band->set_corner_radius(CORNER_TOP_LEFT, StudioTheme::CORNER_RADIUS * EDSCALE);
+	band->set_corner_radius(CORNER_TOP_RIGHT, StudioTheme::CORNER_RADIUS * EDSCALE);
+	p_theme->set_stylebox("tabbar_background", "TabContainer", band);
+
+	Ref<StyleBoxFlat> selected = _duplicate_flat(p_theme->get_stylebox("tab_selected", "TabContainer"));
+	selected->set_border_width(SIDE_TOP, MAX(2, Math::round(2 * EDSCALE)));
+	selected->set_border_color(p_config.accent_color);
+	p_theme->set_stylebox("tab_selected", "TabContainer", selected);
+	p_theme->set_stylebox("tab_selected", "TabBar", selected);
+}
+
+// Selected rows in trees and lists: a translucent accent fill instead of a thin outline.
+static void _populate_selection(const Ref<EditorTheme> &p_theme, const EditorThemeManager::ThemeConfiguration &p_config) {
+	for (const char *type : { "Tree", "ItemList" }) {
+		for (const char *state : { "selected", "selected_focus" }) {
+			Ref<StyleBoxFlat> style = _duplicate_flat(p_theme->get_stylebox(state, type));
+			Color fill = p_config.accent_color;
+			fill.a = String(state) == "selected_focus" ? 0.38 : 0.24;
+			style->set_bg_color(fill);
+			style->set_border_width_all(0);
+			style->set_corner_radius_all(3 * EDSCALE);
+			style->set_draw_center(true);
+			p_theme->set_stylebox(state, type, style);
+		}
+	}
+}
+
 void StudioTheme::populate_overrides(const Ref<EditorTheme> &p_theme, const EditorThemeManager::ThemeConfiguration &p_config) {
 	for (const char *type : { "PopupMenu", "PopupPanel", "TooltipPanel" }) {
 		p_theme->set_stylebox(SceneStringName(panel), type, _make_floating(p_theme->get_stylebox(SceneStringName(panel), type), p_config));
 	}
+	_populate_tabs(p_theme, p_config);
+	_populate_selection(p_theme, p_config);
 }

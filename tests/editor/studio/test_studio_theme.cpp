@@ -91,6 +91,29 @@ TEST_CASE("[Editor][Studio] Studio style makes popup menus translucent and round
 	CHECK(panel->get_corner_radius(CORNER_TOP_LEFT) > 0);
 }
 
+TEST_CASE("[Editor][Studio] Studio dock tabs have an accent line on the selected tab") {
+	Ref<EditorTheme> theme = generate_with("Studio", "Studio");
+	const Color accent = EDITOR_GET("interface/theme/accent_color");
+	Ref<StyleBoxFlat> selected = theme->get_stylebox("tab_selected", "TabContainer");
+	REQUIRE(selected.is_valid());
+	CHECK(selected->get_border_width(SIDE_TOP) > 0);
+	CHECK(selected->get_border_color().is_equal_approx(accent));
+	Ref<StyleBoxFlat> band = theme->get_stylebox("tabbar_background", "TabContainer");
+	REQUIRE(band.is_valid());
+	CHECK(band->get_bg_color().a > 0.0);
+}
+
+TEST_CASE("[Editor][Studio] Studio tree selection is filled with the accent color") {
+	Ref<EditorTheme> theme = generate_with("Studio", "Studio");
+	const Color accent = EDITOR_GET("interface/theme/accent_color");
+	Ref<StyleBoxFlat> selected = theme->get_stylebox("selected_focus", "Tree");
+	REQUIRE(selected.is_valid());
+	const Color bg = selected->get_bg_color();
+	CHECK(Color(bg.r, bg.g, bg.b).is_equal_approx(Color(accent.r, accent.g, accent.b)));
+	CHECK(bg.a > 0.2);
+	CHECK(bg.a < 0.6);
+}
+
 TEST_CASE("[Editor][Studio] Modern style popup menus are unchanged (opaque)") {
 	Ref<EditorTheme> theme = generate_with("Modern", "Default");
 	Ref<StyleBoxFlat> panel = theme->get_stylebox(SceneStringName(panel), "PopupMenu");
