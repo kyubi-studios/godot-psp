@@ -1,0 +1,68 @@
+name: 🎛️ Studio CI
+on:
+  push:
+    branches: [main, "studio/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to build and test.
+        required: true
+        type: string
+
+concurrency:
+  group: studio-ci|${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  editor:
+    name: Linux editor build, tests, smoke test
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          submodules: recursive
+
+      - name: Setup dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libwayland-bin
+
+      - name: Check Studio hook list
+        run: python3 misc/studio/check_hooks.py
+
+      - name: Restore Godot build cache
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: studio-linux-editor
+        continue-on-error: true
+
+      - name: Setup Python and SCons
+        uses: ./.github/actions/godot-deps
+
+      - name: Compilation
+        uses: ./.github/actions/godot-build
+        with:
+          scons-flags: tests=yes debug_symbols=no
+          platform: linuxbsd
+          target: editor
+
+      - name: Save Godot build cache
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: studio-linux-editor
+        continue-on-error: true
+
+      - name: Studio unit tests
+        run: ./bin/godot.linuxbsd.editor.x86_64 --headless --test --force-colors --test-case="*[Studio]*"
+
+      - name: Full unit test suite
+        run: ./bin/godot.linuxbsd.editor.x86_64 --headless --test --force-colors
+
+      - name: Editor smoke test
+        run: misc/studio/smoke_test.sh ./bin/godot.linuxbsd.editor.x86_64
