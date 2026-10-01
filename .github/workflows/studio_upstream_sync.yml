@@ -1,7 +1,12 @@
 name: 🔄 Studio upstream sync
 # Merges godotengine/godot `4.7` into `main` every night. The merge is built and
-# tested on a `sync/upstream-*` branch first; `main` only fast-forwards when it is green.
-# On conflicts or failures a pull request is opened instead, so `main` never breaks.
+# tested on the `sync/upstream-4.7` branch first; `main` only fast-forwards when it is green.
+# On conflicts, failures or a moved `main`, a single pull request is opened (or updated)
+# instead, so `main` never breaks.
+#
+# Requires the repository secret STUDIO_SYNC_TOKEN: a token with `contents`, `pull-requests`
+# and `workflows` write access. GITHUB_TOKEN cannot push commits that touch
+# .github/workflows/, which upstream changes regularly.
 on:
   schedule:
     - cron: "17 3 * * *"
@@ -18,6 +23,7 @@ concurrency:
 env:
   UPSTREAM_URL: https://github.com/godotengine/godot.git
   UPSTREAM_BRANCH: "4.7"
+  SYNC_BRANCH: sync/upstream-4.7
 
 jobs:
   merge:
@@ -25,18 +31,27 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       status: ${{ steps.merge.outputs.status }}
-      branch: ${{ steps.merge.outputs.branch }}
     steps:
+      - name: Check token
+        env:
+          SYNC_TOKEN: ${{ secrets.STUDIO_SYNC_TOKEN }}
+        run: |
+          if [ -z "$SYNC_TOKEN" ]; then
+            echo "::error::Repository secret STUDIO_SYNC_TOKEN is missing (needs contents, pull-requests and workflows write). See STUDIO.md."
+            exit 1
+          fi
+
       - name: Checkout main
         uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.STUDIO_SYNC_TOKEN }}
 
-      - name: Merge upstream into a sync branch
+      - name: Merge upstream into the sync branch
         id: merge
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.STUDIO_SYNC_TOKEN }}
         run: |
           git config user.name "studio-sync[bot]"
           git config user.email "studio-sync@users.noreply.github.com"
@@ -48,26 +63,35 @@ jobs:
             echo "status=uptodate" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          BRANCH="sync/upstream-${UPSTREAM_BRANCH}-${{ github.run_id }}"
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
-          git switch -c "$BRANCH"
+
+          open_or_update_pr() {
+            # $1 = title, $2 = body file
+            if [ -n "$(gh pr list --head "$SYNC_BRANCH" --base main --state open --json number --jq '.[].number')" ]; then
+              gh pr comment "$SYNC_BRANCH" --body-file "$2"
+            else
+              gh pr create --base main --head "$SYNC_BRANCH" --title "$1" --body-file "$2"
+            fi
+          }
+
+          # The sync branch is owned by this workflow; it is rebuilt from main every run.
+          git switch -C "$SYNC_BRANCH"
           if git merge --no-edit -m "Merge $TARGET into main" "$TARGET"; then
-            git push origin "$BRANCH"
+            git push --force origin "$SYNC_BRANCH"
             echo "status=merged" >> "$GITHUB_OUTPUT"
           else
             CONFLICTS="$(git diff --name-only --diff-filter=U)"
             git merge --abort
-            # Push the upstream tip as-is so the PR shows the conflicts for manual resolution.
-            git switch -C "$BRANCH" "$TARGET"
-            git push origin "$BRANCH"
+            # Publish the upstream tip so the PR shows the conflicts for manual resolution.
+            git switch -C "$SYNC_BRANCH" "$TARGET"
+            git push --force origin "$SYNC_BRANCH"
             {
               echo "Automatic merge of \`$TARGET\` into \`main\` hit conflicts in:"
               echo
               echo "$CONFLICTS" | sed 's/^/- `/; s/$/`/'
               echo
-              echo "Resolve locally with \`misc/studio/sync_upstream.sh\` and check every file in \`STUDIO_HOOKS.md\`."
+              echo "Resolve locally with \`misc/studio/sync_upstream.sh\` and re-check every file in \`STUDIO_HOOKS.md\`."
             } > pr_body.md
-            gh pr create --base main --head "$BRANCH" --title "Upstream $UPSTREAM_BRANCH merge: conflicts" --body-file pr_body.md
+            open_or_update_pr "Upstream $UPSTREAM_BRANCH merge: conflicts" pr_body.md
             echo "status=conflict" >> "$GITHUB_OUTPUT"
             exit 1
           fi
@@ -78,31 +102,43 @@ jobs:
     if: needs.merge.outputs.status == 'merged'
     uses: ./.github/workflows/studio_ci.yml
     with:
-      ref: ${{ needs.merge.outputs.branch }}
+      ref: sync/upstream-4.7
 
   publish:
     name: Fast-forward main
     needs: [merge, verify]
-    if: always() && needs.merge.outputs.status == 'merged'
+    if: always() && needs.merge.outputs.status == 'merged' && (needs.verify.result == 'success' || needs.verify.result == 'failure')
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout sync branch
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.merge.outputs.branch }}
+          ref: ${{ env.SYNC_BRANCH }}
           fetch-depth: 0
+          token: ${{ secrets.STUDIO_SYNC_TOKEN }}
 
-      - name: Fast-forward main, or open a PR on failure
+      - name: Fast-forward main, or open a PR
         env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ needs.merge.outputs.branch }}
+          GH_TOKEN: ${{ secrets.STUDIO_SYNC_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          open_or_update_pr() {
+            echo "$2" > pr_body.md
+            if [ -n "$(gh pr list --head "$SYNC_BRANCH" --base main --state open --json number --jq '.[].number')" ]; then
+              gh pr comment "$SYNC_BRANCH" --body-file pr_body.md
+            else
+              gh pr create --base main --head "$SYNC_BRANCH" --title "$1" --body-file pr_body.md
+            fi
+          }
+
           if [ "${{ needs.verify.result }}" = "success" ]; then
-            git push origin "HEAD:main"
-            git push origin --delete "$BRANCH"
-          else
-            gh pr create --base main --head "$BRANCH" \
-              --title "Upstream $UPSTREAM_BRANCH merge: build or tests failed" \
-              --body "The merge of \`upstream/$UPSTREAM_BRANCH\` was clean but Studio CI failed. See run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}."
+            if git push origin "HEAD:main"; then
+              exit 0
+            fi
+            open_or_update_pr "Upstream $UPSTREAM_BRANCH merge: main moved during CI" \
+              "The upstream merge is green but \`main\` changed while it was being tested, so it could not be fast-forwarded. Merge this PR (or rerun the workflow). Run: $RUN_URL"
             exit 1
           fi
+          open_or_update_pr "Upstream $UPSTREAM_BRANCH merge: build or tests failed" \
+            "The merge of \`upstream/$UPSTREAM_BRANCH\` was clean but Studio CI failed. Run: $RUN_URL"
+          exit 1
