@@ -37,6 +37,7 @@
 #include "editor/settings/editor_settings.h"
 #include "editor/studio/studio_drawer.h"
 #include "editor/studio/studio_pages_bar.h"
+#include "editor/studio/studio_recent_button.h"
 #include "scene/gui/button.h"
 #include "scene/gui/control.h"
 #include "scene/main/viewport.h"
@@ -65,6 +66,10 @@ void StudioEditor::setup(EditorTitleBar *p_title_bar, Control *p_title_right_con
 	title_right_container->add_child(pages_bar);
 	title_right_container->move_child(pages_bar, 0);
 	pages_bar->set_current_page(EditorSettings::get_singleton()->get_project_metadata("studio", "current_page", String()));
+
+	StudioRecentButton *recent_button = memnew(StudioRecentButton);
+	title_right_container->add_child(recent_button);
+	title_right_container->move_child(recent_button, 0);
 
 	left_docks_button = memnew(Button);
 	left_docks_button->set_toggle_mode(true);
