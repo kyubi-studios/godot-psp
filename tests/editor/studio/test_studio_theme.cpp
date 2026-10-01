@@ -114,6 +114,45 @@ TEST_CASE("[Editor][Studio] Studio tree selection is filled with the accent colo
 	CHECK(bg.a < 0.6);
 }
 
+TEST_CASE("[Editor][Studio] Hovering a selected row keeps the accent fill") {
+	Ref<EditorTheme> theme = generate_with("Studio", "Studio");
+	const Color accent = EDITOR_GET("interface/theme/accent_color");
+	for (const char *type : { "Tree", "ItemList" }) {
+		for (const char *state : { "hovered_selected", "hovered_selected_focus" }) {
+			Ref<StyleBoxFlat> style = theme->get_stylebox(state, type);
+			INFO(type, " ", state);
+			REQUIRE(style.is_valid());
+			CHECK(style->is_draw_center_enabled());
+			const Color bg = style->get_bg_color();
+			CHECK(Color(bg.r, bg.g, bg.b).is_equal_approx(Color(accent.r, accent.g, accent.b)));
+			CHECK(bg.a > 0.2);
+		}
+	}
+}
+
+TEST_CASE("[Editor][Studio] Tab container variations also get the accent line") {
+	Ref<EditorTheme> theme = generate_with("Studio", "Studio");
+	const Color accent = EDITOR_GET("interface/theme/accent_color");
+	for (const char *type : { "TabContainerOdd", "TabContainerInner", "TabBarInner" }) {
+		if (!theme->has_stylebox("tab_selected", type)) {
+			continue;
+		}
+		INFO(type);
+		Ref<StyleBoxFlat> selected = theme->get_stylebox("tab_selected", type);
+		REQUIRE(selected.is_valid());
+		CHECK(selected->get_border_width(SIDE_TOP) > 0);
+		CHECK(selected->get_border_color().is_equal_approx(accent));
+	}
+}
+
+TEST_CASE("[Editor][Studio] PopupPanel keeps Modern's shadow size (panels borrow it inline)") {
+	const int modern_shadow = Ref<StyleBoxFlat>(generate_with("Modern", "Default")->get_stylebox(SceneStringName(panel), "PopupPanel"))->get_shadow_size();
+	Ref<StyleBoxFlat> studio = generate_with("Studio", "Studio")->get_stylebox(SceneStringName(panel), "PopupPanel");
+	REQUIRE(studio.is_valid());
+	CHECK(studio->get_shadow_size() == modern_shadow);
+	CHECK(studio->get_bg_color().a < 1.0);
+}
+
 TEST_CASE("[Editor][Studio] Modern style popup menus are unchanged (opaque)") {
 	Ref<EditorTheme> theme = generate_with("Modern", "Default");
 	Ref<StyleBoxFlat> panel = theme->get_stylebox(SceneStringName(panel), "PopupMenu");

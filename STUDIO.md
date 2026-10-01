@@ -24,6 +24,7 @@ upstream/4.7 ──(nightly, automatic)──> main  (4.7.x + Studio editor feat
 | **Bottom drawer** | Optional: the bottom panel (Output, Debugger, …) closes by itself when you click/focus elsewhere in the main window, unless it is pinned. Open it as usual (`Ctrl+J` or its tabs). | `interface/studio/bottom_drawer/auto_hide` (default off) |
 
 | **Studio look** | *Editor Settings > Interface > Theme*: set **Style = Studio** and **Color Preset = Studio** (recommended with **Spacing Preset = Compact** and *Interface > Editor > Appearance > Collapse Main Menu* for the burger menu). Dark blue-slate palette, translucent rounded menus/popups/tooltips, dock tabs with a header band and an accent line, accent-filled tree/list selection. | `interface/theme/studio/base_hue` (0.62), `accent_hue` (0.25), `vividness` (0.30) — changes apply live. |
+| **Scene cache** | Recently closed scenes stay loaded, so reopening them (Ctrl+Shift+T, recent files, FileSystem) skips reloading textures and other resources — 1375 ms → 47 ms on the benchmark scene. | `interface/studio/scene_cache/max_scenes` (default 5, 0 = off) |
 | **Recent files** | Clock button in the title bar: recently opened scenes and scripts of the project (missing files are skipped). | — |
 
 Current page is remembered per project (project metadata, written on save and on

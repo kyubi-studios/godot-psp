@@ -58,7 +58,9 @@ void StudioTheme::get_preset_colors(Color &r_base, Color &r_accent, float &r_con
 }
 
 // Floating surfaces (menus, popups, tooltips): translucent, rounded, with a light rim and a soft shadow.
-static Ref<StyleBoxFlat> _make_floating(const Ref<StyleBox> &p_base, const EditorThemeManager::ThemeConfiguration &p_config) {
+// Panels that borrow the PopupPanel style inline (progress dialog, tile editor) keep the stock shadow
+// size, so p_keep_shadow avoids drawing a large shadow over neighboring controls.
+static Ref<StyleBoxFlat> _make_floating(const Ref<StyleBox> &p_base, const EditorThemeManager::ThemeConfiguration &p_config, bool p_keep_shadow) {
 	Ref<StyleBoxFlat> base = p_base;
 	Ref<StyleBoxFlat> style = base.is_valid() ? Ref<StyleBoxFlat>(base->duplicate()) : Ref<StyleBoxFlat>(memnew(StyleBoxFlat));
 	Color bg = style->get_bg_color();
@@ -67,9 +69,11 @@ static Ref<StyleBoxFlat> _make_floating(const Ref<StyleBox> &p_base, const Edito
 	style->set_corner_radius_all((StudioTheme::CORNER_RADIUS + 2) * EDSCALE);
 	style->set_border_width_all(MAX(1, Math::round(EDSCALE)));
 	style->set_border_color(p_config.mono_color * Color(1, 1, 1, 0.12));
-	style->set_shadow_color(Color(0, 0, 0, 0.45));
-	style->set_shadow_size(10 * EDSCALE);
-	style->set_shadow_offset(Vector2(0, 3) * EDSCALE);
+	if (!p_keep_shadow) {
+		style->set_shadow_color(Color(0, 0, 0, 0.45));
+		style->set_shadow_size(10 * EDSCALE);
+		style->set_shadow_offset(Vector2(0, 3) * EDSCALE);
+	}
 	style->set_anti_aliased(true);
 	return style;
 }
@@ -90,17 +94,25 @@ static void _populate_tabs(const Ref<EditorTheme> &p_theme, const EditorThemeMan
 	Ref<StyleBoxFlat> selected = _duplicate_flat(p_theme->get_stylebox("tab_selected", "TabContainer"));
 	selected->set_border_width(SIDE_TOP, MAX(2, Math::round(2 * EDSCALE)));
 	selected->set_border_color(p_config.accent_color);
-	p_theme->set_stylebox("tab_selected", "TabContainer", selected);
-	p_theme->set_stylebox("tab_selected", "TabBar", selected);
+	for (const char *type : { "TabContainer", "TabBar", "TabContainerOdd", "TabContainerInner", "TabBarInner" }) {
+		if (p_theme->has_stylebox("tab_selected", type) || String(type) == "TabContainer" || String(type) == "TabBar") {
+			p_theme->set_stylebox("tab_selected", type, selected);
+		}
+	}
 }
 
 // Selected rows in trees and lists: a translucent accent fill instead of a thin outline.
 static void _populate_selection(const Ref<EditorTheme> &p_theme, const EditorThemeManager::ThemeConfiguration &p_config) {
 	for (const char *type : { "Tree", "ItemList" }) {
-		for (const char *state : { "selected", "selected_focus" }) {
+		const struct {
+			const char *state;
+			float alpha;
+		} states[] = { { "selected", 0.24 }, { "selected_focus", 0.38 }, { "hovered_selected", 0.30 }, { "hovered_selected_focus", 0.44 } };
+		for (const auto &entry : states) {
+			const char *state = entry.state;
 			Ref<StyleBoxFlat> style = _duplicate_flat(p_theme->get_stylebox(state, type));
 			Color fill = p_config.accent_color;
-			fill.a = String(state) == "selected_focus" ? 0.38 : 0.24;
+			fill.a = entry.alpha;
 			style->set_bg_color(fill);
 			style->set_border_width_all(0);
 			style->set_corner_radius_all(3 * EDSCALE);
@@ -112,7 +124,8 @@ static void _populate_selection(const Ref<EditorTheme> &p_theme, const EditorThe
 
 void StudioTheme::populate_overrides(const Ref<EditorTheme> &p_theme, const EditorThemeManager::ThemeConfiguration &p_config) {
 	for (const char *type : { "PopupMenu", "PopupPanel", "TooltipPanel" }) {
-		p_theme->set_stylebox(SceneStringName(panel), type, _make_floating(p_theme->get_stylebox(SceneStringName(panel), type), p_config));
+		const bool keep_shadow = String(type) == "PopupPanel";
+		p_theme->set_stylebox(SceneStringName(panel), type, _make_floating(p_theme->get_stylebox(SceneStringName(panel), type), p_config, keep_shadow));
 	}
 	_populate_tabs(p_theme, p_config);
 	_populate_selection(p_theme, p_config);
