@@ -35,7 +35,12 @@ TEST_FORCE_LINK(test_studio_theme)
 
 #ifdef TOOLS_ENABLED
 
+#include "editor/settings/editor_settings.h"
 #include "editor/studio/studio_theme.h"
+#include "editor/themes/editor_theme.h"
+#include "editor/themes/editor_theme_manager.h"
+#include "scene/resources/style_box_flat.h"
+#include "scene/scene_string_names.h"
 
 namespace TestStudioTheme {
 
@@ -70,6 +75,45 @@ TEST_CASE("[Studio] Hue wraps and inputs are clamped") {
 	CHECK(c.g >= 0.0);
 	CHECK(c.b <= 1.0);
 	CHECK(c.is_equal_approx(StudioThemeColors::base_color(0.0, 1.0)));
+}
+
+static Ref<EditorTheme> generate_with(const String &p_style, const String &p_preset) {
+	EditorSettings::get_singleton()->set("interface/theme/style", p_style);
+	EditorSettings::get_singleton()->set("interface/theme/color_preset", p_preset);
+	return EditorThemeManager::generate_theme();
+}
+
+TEST_CASE("[Editor][Studio] Studio style makes popup menus translucent and rounded") {
+	Ref<EditorTheme> theme = generate_with("Studio", "Studio");
+	Ref<StyleBoxFlat> panel = theme->get_stylebox(SceneStringName(panel), "PopupMenu");
+	REQUIRE(panel.is_valid());
+	CHECK(panel->get_bg_color().a < 1.0);
+	CHECK(panel->get_corner_radius(CORNER_TOP_LEFT) > 0);
+}
+
+TEST_CASE("[Editor][Studio] Modern style popup menus are unchanged (opaque)") {
+	Ref<EditorTheme> theme = generate_with("Modern", "Default");
+	Ref<StyleBoxFlat> panel = theme->get_stylebox(SceneStringName(panel), "PopupMenu");
+	REQUIRE(panel.is_valid());
+	CHECK(panel->get_bg_color().a == 1.0);
+}
+
+TEST_CASE("[Editor][Studio] Studio color preset derives colors from the hue settings") {
+	EditorSettings::get_singleton()->set("interface/theme/studio/base_hue", 0.62);
+	EditorSettings::get_singleton()->set("interface/theme/studio/accent_hue", 0.25);
+	EditorSettings::get_singleton()->set("interface/theme/studio/vividness", 0.3);
+	generate_with("Studio", "Studio");
+	const Color base = EDITOR_GET("interface/theme/base_color");
+	const Color accent = EDITOR_GET("interface/theme/accent_color");
+	CHECK(base.is_equal_approx(StudioThemeColors::base_color(0.62, 0.3)));
+	CHECK(accent.is_equal_approx(StudioThemeColors::accent_color(0.25, 0.3)));
+}
+
+TEST_CASE("[Editor][Studio] Custom color preset is not overridden by Studio hue settings") {
+	EditorSettings::get_singleton()->set("interface/theme/base_color", Color(0.3, 0.1, 0.1));
+	generate_with("Studio", "Custom");
+	const Color base = EDITOR_GET("interface/theme/base_color");
+	CHECK(base.is_equal_approx(Color(0.3, 0.1, 0.1)));
 }
 
 } // namespace TestStudioTheme

@@ -32,6 +32,7 @@
 #pragma once
 
 #include "core/math/color.h"
+#include "editor/themes/editor_theme_manager.h"
 
 // Color math for the Studio color preset: a dark, slightly tinted base and a saturated accent,
 // both driven by a hue and a "vividness" amount (see interface/theme/studio/*).
@@ -39,4 +40,16 @@ class StudioThemeColors {
 public:
 	static Color base_color(float p_hue, float p_vividness);
 	static Color accent_color(float p_hue, float p_vividness);
+};
+
+// The "Studio" editor theme style: the Modern style plus the overrides below.
+class StudioTheme {
+public:
+	static constexpr int CORNER_RADIUS = 5;
+	static constexpr float POPUP_ALPHA = 0.94;
+
+	// Colors for the "Studio" color preset, read from interface/theme/studio/*.
+	static void get_preset_colors(Color &r_base, Color &r_accent, float &r_contrast);
+
+	static void populate_overrides(const Ref<EditorTheme> &p_theme, const EditorThemeManager::ThemeConfiguration &p_config);
 };

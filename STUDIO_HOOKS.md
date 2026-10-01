@@ -15,3 +15,5 @@ Only the first backticked path of each row is checked; keep one file per row.
 | `editor/docks/editor_dock_manager.h` | dock regions | `DockRegion` enum, `get_slot_region()`, `set/is_dock_region_visible()`, `dock_region_visible[]` member, `_bind_methods()` declaration. |
 | `editor/docks/editor_dock_manager.cpp` | dock regions | Region API + `dock_region_visibility_changed` signal; `_make_dock_visible()` re-shows a hidden region before focusing a dock in it; `save_docks_to_config()` keeps the saved widths of hidden-region columns. |
 | `editor/docks/dock_tab_container.cpp` | dock regions | `update_visibility()` and `can_switch_dock()` also require the slot's region to be visible. |
+| `editor/settings/editor_settings.cpp` | look | Adds `Studio` to the theme style and color preset enums; registers `interface/theme/studio/{base_hue,accent_hue,vividness}`. |
+| `editor/themes/editor_theme_manager.cpp` | look | Studio style = Modern + `StudioTheme::populate_overrides()`; Studio corner radius; Studio color preset via `StudioTheme::get_preset_colors()`. |

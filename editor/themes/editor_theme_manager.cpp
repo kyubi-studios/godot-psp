@@ -44,6 +44,7 @@
 #include "editor/themes/editor_theme.h"
 #include "editor/themes/theme_classic.h"
 #include "editor/themes/theme_modern.h"
+#include "editor/studio/studio_theme.h" // STUDIO: look
 #include "scene/resources/style_box_flat.h"
 #include "scene/resources/style_box_line.h"
 #include "scene/resources/style_box_texture.h"
@@ -177,7 +178,7 @@ Ref<EditorTheme> EditorThemeManager::_create_base_theme(const Ref<EditorTheme> &
 
 	print_verbose(vformat("EditorTheme: Generating new theme for the config '%d'.", theme->get_generated_hash()));
 
-	bool is_default_style = config.style == "Modern";
+	bool is_default_style = config.style == "Modern" || config.style == "Studio"; // STUDIO: look
 	if (is_default_style) {
 		ThemeModern::populate_shared_styles(theme, config);
 	} else {
@@ -233,6 +234,10 @@ Ref<EditorTheme> EditorThemeManager::_create_base_theme(const Ref<EditorTheme> &
 	_populate_text_editor_styles(theme, config);
 	_populate_visual_shader_styles(theme, config);
 
+	if (config.style == "Studio") { // STUDIO: look
+		StudioTheme::populate_overrides(theme, config);
+	}
+
 	OS::get_singleton()->benchmark_end_measure(get_benchmark_key(), "Create Base Theme");
 	return theme;
 }
@@ -274,6 +279,9 @@ EditorThemeManager::ThemeConfiguration EditorThemeManager::_create_theme_config(
 		if (config.style == "Classic") {
 			config.draw_relationship_lines = RELATIONSHIP_ALL;
 			config.corner_radius = 3;
+		} else if (config.style == "Studio") { // STUDIO: look
+			config.draw_relationship_lines = config.default_relationship_lines;
+			config.corner_radius = StudioTheme::CORNER_RADIUS;
 		} else { // Default
 			config.draw_relationship_lines = config.default_relationship_lines;
 			config.corner_radius = config.default_corner_radius;
@@ -356,6 +364,8 @@ EditorThemeManager::ThemeConfiguration EditorThemeManager::_create_theme_config(
 				preset_accent_color = Color(0.15, 0.55, 0.82);
 				preset_base_color = Color(0.89, 0.86, 0.79);
 				preset_contrast = light_contrast;
+			} else if (config.preset == "Studio") { // STUDIO: look
+				StudioTheme::get_preset_colors(preset_base_color, preset_accent_color, preset_contrast);
 			} else { // Default
 				preset_accent_color = Color(0.337, 0.62, 1.0);
 				preset_base_color = Color(0.161, 0.161, 0.161);
