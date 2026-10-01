@@ -33,6 +33,7 @@
 
 #include "scene/main/node.h"
 
+class Button;
 class Control;
 class EditorBottomPanel;
 class EditorTitleBar;
@@ -51,8 +52,13 @@ class StudioEditor : public Node {
 	Control *title_right_container = nullptr;
 	EditorBottomPanel *bottom_panel = nullptr;
 	StudioPagesBar *pages_bar = nullptr;
+	Button *left_docks_button = nullptr;
+	Button *right_docks_button = nullptr;
 
 	void _layouts_changed();
+	void _toggle_dock_region(int p_region);
+	void _update_dock_region_buttons();
+	void _update_icons();
 
 protected:
 	static void _bind_methods();

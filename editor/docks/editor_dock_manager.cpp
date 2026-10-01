@@ -701,6 +701,10 @@ void EditorDockManager::_make_dock_visible(EditorDock *p_dock, bool p_grab_focus
 	}
 
 	DockTabContainer *tab_container = p_dock->get_parent_container();
+	// STUDIO: dock regions
+	if (tab_container && !is_dock_region_visible(get_slot_region(tab_container->dock_slot))) {
+		set_dock_region_visible(get_slot_region(tab_container->dock_slot), true);
+	}
 	if (!tab_container || !tab_container->can_switch_dock()) {
 		return;
 	}
@@ -775,6 +779,56 @@ void EditorDockManager::set_docks_visible(bool p_show) {
 
 bool EditorDockManager::are_docks_visible() const {
 	return docks_visible;
+}
+
+// STUDIO: dock regions
+EditorDockManager::DockRegion EditorDockManager::get_slot_region(int p_slot) {
+	switch (p_slot) {
+		case EditorDock::DOCK_SLOT_LEFT_UL:
+		case EditorDock::DOCK_SLOT_LEFT_BL:
+		case EditorDock::DOCK_SLOT_LEFT_UR:
+		case EditorDock::DOCK_SLOT_LEFT_BR:
+			return DOCK_REGION_LEFT;
+		case EditorDock::DOCK_SLOT_RIGHT_UL:
+		case EditorDock::DOCK_SLOT_RIGHT_BL:
+		case EditorDock::DOCK_SLOT_RIGHT_UR:
+		case EditorDock::DOCK_SLOT_RIGHT_BR:
+			return DOCK_REGION_RIGHT;
+		case EditorDock::DOCK_SLOT_BOTTOM:
+		case EditorDock::DOCK_SLOT_BOTTOM_L:
+		case EditorDock::DOCK_SLOT_BOTTOM_R:
+			return DOCK_REGION_BOTTOM;
+		default:
+			return DOCK_REGION_NONE;
+	}
+}
+
+void EditorDockManager::set_dock_region_visible(DockRegion p_region, bool p_visible) {
+	ERR_FAIL_INDEX(p_region, DOCK_REGION_MAX);
+	if (dock_region_visible[p_region] == p_visible) {
+		return;
+	}
+	dock_region_visible[p_region] = p_visible;
+	for (int i = 0; i < EditorDock::DOCK_SLOT_MAX; i++) {
+		// Show and hide in reverse order due to the SplitContainer prioritizing the last split offset.
+		const int slot = p_visible ? i : EditorDock::DOCK_SLOT_MAX - i - 1;
+		if (get_slot_region(slot) == p_region) {
+			dock_slots[slot]->update_visibility();
+		}
+	}
+	_update_layout();
+	emit_signal(SNAME("dock_region_visibility_changed"), p_region, p_visible);
+}
+
+void EditorDockManager::_bind_methods() {
+	ADD_SIGNAL(MethodInfo("dock_region_visibility_changed", PropertyInfo(Variant::INT, "region"), PropertyInfo(Variant::BOOL, "visible")));
+}
+
+bool EditorDockManager::is_dock_region_visible(DockRegion p_region) const {
+	if (p_region < 0 || p_region >= DOCK_REGION_MAX) {
+		return true;
+	}
+	return dock_region_visible[p_region];
 }
 
 void EditorDockManager::update_tab_styles() {

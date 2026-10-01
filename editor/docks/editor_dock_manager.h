@@ -102,6 +102,7 @@ private:
 
 	EditorDock *dock_tab_dragged = nullptr;
 	bool docks_visible = true;
+	bool dock_region_visible[3] = { true, true, true }; // STUDIO: dock regions
 
 	DockContextPopup *dock_context_popup = nullptr;
 	PopupMenu *docks_menu = nullptr;
@@ -126,7 +127,22 @@ private:
 	void _queue_update_tab_style(EditorDock *p_dock);
 	void _update_dirty_dock_tabs();
 
+protected:
+	static void _bind_methods(); // STUDIO: dock regions
+
 public:
+	// STUDIO: dock regions
+	enum DockRegion {
+		DOCK_REGION_NONE = -1,
+		DOCK_REGION_LEFT,
+		DOCK_REGION_RIGHT,
+		DOCK_REGION_BOTTOM,
+		DOCK_REGION_MAX,
+	};
+	static DockRegion get_slot_region(int p_slot);
+	void set_dock_region_visible(DockRegion p_region, bool p_visible);
+	bool is_dock_region_visible(DockRegion p_region) const;
+
 	static EditorDockManager *get_singleton() { return singleton; }
 
 	void update_docks_menu();

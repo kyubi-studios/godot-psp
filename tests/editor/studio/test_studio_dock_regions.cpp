@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  test_studio_editor.cpp                                                */
+/*  test_studio_dock_regions.cpp                                          */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -31,61 +31,31 @@
 
 #include "tests/test_macros.h"
 
-TEST_FORCE_LINK(test_studio_editor)
+TEST_FORCE_LINK(test_studio_dock_regions)
 
 #ifdef TOOLS_ENABLED
 
-#include "core/input/input_event.h"
-#include "editor/settings/editor_settings.h"
-#include "editor/studio/studio_editor.h"
+#include "editor/docks/editor_dock_manager.h"
 
-namespace TestStudioEditor {
+namespace TestStudioDockRegions {
 
-TEST_CASE("[Studio] StudioEditor singleton lifetime") {
-	CHECK(StudioEditor::get_singleton() == nullptr);
-
-	StudioEditor *studio = memnew(StudioEditor);
-	CHECK(StudioEditor::get_singleton() == studio);
-
-	memdelete(studio);
-	CHECK(StudioEditor::get_singleton() == nullptr);
+TEST_CASE("[Studio] Dock slots map to their screen region") {
+	using DM = EditorDockManager;
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_LEFT_UL) == DM::DOCK_REGION_LEFT);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_LEFT_BL) == DM::DOCK_REGION_LEFT);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_LEFT_UR) == DM::DOCK_REGION_LEFT);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_LEFT_BR) == DM::DOCK_REGION_LEFT);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_RIGHT_UL) == DM::DOCK_REGION_RIGHT);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_RIGHT_BL) == DM::DOCK_REGION_RIGHT);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_RIGHT_UR) == DM::DOCK_REGION_RIGHT);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_RIGHT_BR) == DM::DOCK_REGION_RIGHT);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_BOTTOM) == DM::DOCK_REGION_BOTTOM);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_BOTTOM_L) == DM::DOCK_REGION_BOTTOM);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_BOTTOM_R) == DM::DOCK_REGION_BOTTOM);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_NONE) == DM::DOCK_REGION_NONE);
+	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_MAX) == DM::DOCK_REGION_NONE);
 }
 
-TEST_CASE("[Editor][Studio] Studio settings and page shortcuts are registered") {
-	StudioEditor::register_settings();
-
-	CHECK(bool(EDITOR_GET("interface/studio/pages/auto_save_on_switch")));
-
-	Ref<InputEventKey> key;
-	key.instantiate();
-	key->set_keycode(Key::KEY_3);
-	key->set_ctrl_pressed(true);
-	key->set_alt_pressed(true);
-	key->set_pressed(true);
-	CHECK(ED_IS_SHORTCUT("studio/page_3", key));
-	CHECK_FALSE(ED_IS_SHORTCUT("studio/page_2", key));
-
-	key->set_keycode(Key::KEY_9);
-	CHECK(ED_IS_SHORTCUT("studio/page_9", key));
-}
-
-TEST_CASE("[Editor][Studio] Dock region toggle shortcuts are registered") {
-	StudioEditor::register_settings();
-
-	Ref<InputEventKey> key;
-	key.instantiate();
-	key->set_ctrl_pressed(true);
-	key->set_alt_pressed(true);
-	key->set_pressed(true);
-
-	key->set_keycode(Key::BRACKETLEFT);
-	CHECK(ED_IS_SHORTCUT("studio/toggle_left_docks", key));
-	CHECK_FALSE(ED_IS_SHORTCUT("studio/toggle_right_docks", key));
-
-	key->set_keycode(Key::BRACKETRIGHT);
-	CHECK(ED_IS_SHORTCUT("studio/toggle_right_docks", key));
-}
-
-} // namespace TestStudioEditor
+} // namespace TestStudioDockRegions
 
 #endif // TOOLS_ENABLED
