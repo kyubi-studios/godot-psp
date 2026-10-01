@@ -108,5 +108,42 @@ class RunBenchHelpersTest(unittest.TestCase):
         self.assertIsNotNone(run_bench.time_command([sys.executable, "-c", "pass"], timeout=30))
 
 
+    def test_import_errors_count_as_failure(self):
+        self.assertTrue(run_bench.import_failed("x\nERROR: Error importing 'res://a.png'.\n"))
+        self.assertFalse(run_bench.import_failed("all good\nWARNING: something\n"))
+
+    def test_cpu_model(self):
+        cpuinfo = "processor\t: 0\nmodel name\t: Fancy CPU 9000\nflags\t: x\n"
+        self.assertEqual(run_bench.cpu_model(cpuinfo), "Fancy CPU 9000")
+        self.assertEqual(run_bench.cpu_model("nothing"), "unknown")
+
+
+class RunBenchSafetyTest(unittest.TestCase):
+    def test_refuses_non_bench_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, ".godot"))
+            self.assertFalse(run_bench.is_bench_project(tmp))
+            with open(os.path.join(tmp, "bench_load.gd"), "w") as f:
+                f.write("extends SceneTree\n")
+            self.assertTrue(run_bench.is_bench_project(tmp))
+
+    def test_cold_run_fails_when_godot_dir_cannot_be_removed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "elsewhere")
+            os.makedirs(target)
+            project = os.path.join(tmp, "project")
+            os.makedirs(project)
+            # rmtree refuses symlinks, so .godot survives the "cold" reset.
+            os.symlink(target, os.path.join(project, ".godot"))
+            self.assertFalse(run_bench.reset_import_cache(project))
+            self.assertTrue(os.path.isdir(target))
+
+    def test_cold_reset_removes_godot_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, ".godot", "imported"))
+            self.assertTrue(run_bench.reset_import_cache(tmp))
+            self.assertFalse(os.path.exists(os.path.join(tmp, ".godot")))
+
+
 if __name__ == "__main__":
     unittest.main()

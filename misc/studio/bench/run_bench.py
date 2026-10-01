@@ -3,10 +3,15 @@
 
 Scenarios:
   cold_import  delete .godot/, then `--headless --import` (full scan + import of every asset)
-  warm_open    `--headless --import` with an up-to-date .godot/ (startup scan cost only)
+  warm_open    `--headless --import` with an up-to-date .godot/ (headless editor startup + scan + quit;
+               no UI, layout or scene restore)
   scene_load   `-s res://bench_load.gd` → time to load the big scene without the resource cache
 
 Usage: run_bench.py <godot_bin> <project_dir> [--runs 3] [--scenarios a,b] [--json out.json] [--label NAME]
+                    [--build-flags "..."]
+
+Only projects made by make_project.py are accepted, because cold_import deletes the project's .godot/.
+An import that prints `ERROR:` counts as a failed run, never as a (fast) duration.
 """
 
 import argparse
@@ -37,6 +42,28 @@ def parse_load_ms(text):
     return float(match.group(1)) if match else None
 
 
+def import_failed(output):
+    return any(line.startswith("ERROR:") for line in output.splitlines())
+
+
+def cpu_model(cpuinfo_text):
+    for line in cpuinfo_text.splitlines():
+        if line.startswith("model name"):
+            return line.split(":", 1)[1].strip()
+    return "unknown"
+
+
+def is_bench_project(project):
+    return os.path.isfile(os.path.join(project, "bench_load.gd"))
+
+
+def reset_import_cache(project):
+    """Delete the project's .godot/. Returns False if it is still there afterwards."""
+    path = os.path.join(project, ".godot")
+    shutil.rmtree(path, ignore_errors=True)
+    return not os.path.lexists(path)
+
+
 def summarize(samples):
     ok = [s for s in samples if s is not None]
     return {
@@ -54,8 +81,8 @@ def _run(cmd, timeout, env=None):
     start = time.perf_counter()
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
-    except subprocess.TimeoutExpired as e:
-        return None, (e.stdout or "") if isinstance(e.stdout, str) else ""
+    except subprocess.TimeoutExpired:
+        return None, ""
     elapsed = (time.perf_counter() - start) * 1000.0
     output = proc.stdout + proc.stderr
     if proc.returncode != 0:
@@ -68,21 +95,29 @@ def time_command(cmd, timeout):
 
 
 def run_scenario(name, godot, project, env, timeout):
-    if name == "cold_import":
-        shutil.rmtree(os.path.join(project, ".godot"), ignore_errors=True)
-        return _run([godot, "--headless", "--path", project, "--import"], timeout, env)[0]
-    if name == "warm_open":
-        return _run([godot, "--headless", "--path", project, "--import"], timeout, env)[0]
+    if name in ("cold_import", "warm_open"):
+        if name == "cold_import" and not reset_import_cache(project):
+            return None
+        elapsed, output = _run([godot, "--headless", "--path", project, "--import"], timeout, env)
+        return None if elapsed is None or import_failed(output) else elapsed
     if name == "scene_load":
         elapsed, output = _run([godot, "--headless", "--path", project, "-s", "res://bench_load.gd"], timeout, env)
         return parse_load_ms(output) if elapsed is not None else None
     raise ValueError(f"unknown scenario: {name}")
 
 
-def _git_head():
+def _godot_version(godot):
     try:
-        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
+        return subprocess.run([godot, "--version"], capture_output=True, text=True, timeout=60).stdout.strip().splitlines()[-1]
+    except (OSError, subprocess.SubprocessError, IndexError):
+        return "unknown"
+
+
+def _cpu_model():
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as f:
+            return cpu_model(f.read())
+    except OSError:
         return "unknown"
 
 
@@ -95,6 +130,7 @@ def main(argv):
     parser.add_argument("--json")
     parser.add_argument("--label", default="run")
     parser.add_argument("--timeout", type=int, default=1800)
+    parser.add_argument("--build-flags", default="", help="SCons flags the binary was built with (recorded only)")
     args = parser.parse_args(argv)
 
     scenarios = [s for s in args.scenarios.split(",") if s]
@@ -103,14 +139,16 @@ def main(argv):
             parser.error(f"unknown scenario '{s}' (choose from {', '.join(SCENARIOS)})")
 
     project = os.path.abspath(args.project)
+    if not is_bench_project(project):
+        parser.error(f"'{project}' is not a benchmark project (no bench_load.gd); cold_import would delete its .godot/")
     # Isolate editor settings and caches from the user's own.
     sandbox = tempfile.mkdtemp(prefix="studio-bench-")
     env = dict(os.environ, XDG_CONFIG_HOME=f"{sandbox}/config", XDG_DATA_HOME=f"{sandbox}/data", XDG_CACHE_HOME=f"{sandbox}/cache")
 
     try:
-        if "warm_open" in scenarios or "scene_load" in scenarios:
-            # Make sure the project is imported before warm scenarios.
-            _run([args.godot, "--headless", "--path", project, "--import"], args.timeout, env)
+        # Untimed warm-up: creates editor settings and the doc cache in the fresh sandbox, and
+        # leaves the project imported for warm scenarios, so no sample pays first-launch costs.
+        _run([args.godot, "--headless", "--path", project, "--import"], args.timeout, env)
 
         results = {}
         for name in scenarios:
@@ -120,15 +158,14 @@ def main(argv):
                 print(f"{name} #{i + 1}: {'FAILED' if value is None else f'{value:.1f} ms'}", file=sys.stderr)
                 samples.append(value)
             results[name] = summarize(samples)
-            if name == "cold_import":
-                # Leave the project imported for the following scenarios.
-                _run([args.godot, "--headless", "--path", project, "--import"], args.timeout, env)
     finally:
         shutil.rmtree(sandbox, ignore_errors=True)
 
     report = {
         "label": args.label,
-        "commit": _git_head(),
+        "godot_version": _godot_version(args.godot),
+        "build_flags": args.build_flags,
+        "cpu": _cpu_model(),
         "date": datetime.datetime.now().isoformat(timespec="seconds"),
         "cpus": os.cpu_count(),
         "godot": os.path.abspath(args.godot),
@@ -139,7 +176,7 @@ def main(argv):
         with open(args.json, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=1)
 
-    print(f"| {args.label} ({report['commit']}, {report['cpus']} CPUs) | median ms | min | max | failed |")
+    print(f"| {args.label} ({report['godot_version']}, {report['cpu']}, {report['cpus']} threads) | median ms | min | max | failed |")
     print("|---|---:|---:|---:|---:|")
     for name, r in results.items():
         fmt = lambda v: "—" if v is None else f"{v:.1f}"  # noqa: E731
