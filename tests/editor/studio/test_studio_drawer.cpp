@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  studio_editor.h                                                       */
+/*  test_studio_drawer.cpp                                                */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -29,56 +29,42 @@
 /**************************************************************************/
 
 
-#pragma once
+#include "tests/test_macros.h"
 
-#include "scene/main/node.h"
+TEST_FORCE_LINK(test_studio_drawer)
 
-class Button;
-class Control;
-class EditorBottomPanel;
-class EditorTitleBar;
-class StudioDrawer;
-class StudioPagesBar;
+#ifdef TOOLS_ENABLED
 
-// Root of the Studio editor extensions. Owned by EditorNode; everything Studio adds
-// to the editor UI is created and wired from here so upstream files only need one hook.
-class StudioEditor : public Node {
-	GDCLASS(StudioEditor, Node);
+#include "editor/studio/studio_drawer.h"
 
-	static constexpr int PAGE_SHORTCUT_COUNT = 9;
+namespace TestStudioDrawer {
 
-	static inline StudioEditor *singleton = nullptr;
+// Arguments: enabled, pinned, panel_open, focus_inside_panel, focus_in_popup.
 
-	EditorTitleBar *title_bar = nullptr;
-	Control *title_right_container = nullptr;
-	EditorBottomPanel *bottom_panel = nullptr;
-	StudioPagesBar *pages_bar = nullptr;
-	Button *left_docks_button = nullptr;
-	Button *right_docks_button = nullptr;
-	StudioDrawer *drawer = nullptr;
+TEST_CASE("[Studio] Drawer hides when focus leaves an open, unpinned panel") {
+	CHECK(StudioDrawer::should_auto_hide(true, false, true, false, false));
+}
 
-	void _layouts_changed();
-	void _toggle_dock_region(int p_region);
-	void _update_dock_region_buttons();
-	void _update_icons();
+TEST_CASE("[Studio] Drawer never hides when the feature is disabled") {
+	CHECK_FALSE(StudioDrawer::should_auto_hide(false, false, true, false, false));
+}
 
-protected:
-	static void _bind_methods();
-	virtual void shortcut_input(const Ref<InputEvent> &p_event) override;
+TEST_CASE("[Studio] Drawer stays open while pinned") {
+	CHECK_FALSE(StudioDrawer::should_auto_hide(true, true, true, false, false));
+}
 
-public:
-	static StudioEditor *get_singleton() { return singleton; }
+TEST_CASE("[Studio] Drawer does nothing when the panel is already closed") {
+	CHECK_FALSE(StudioDrawer::should_auto_hide(true, false, false, false, false));
+}
 
-	// Registers Studio editor settings and shortcuts. Requires EditorSettings.
-	static void register_settings();
+TEST_CASE("[Studio] Drawer stays open while focus is inside the panel") {
+	CHECK_FALSE(StudioDrawer::should_auto_hide(true, false, true, true, false));
+}
 
-	void setup(EditorTitleBar *p_title_bar, Control *p_title_right_container, EditorBottomPanel *p_bottom_panel);
+TEST_CASE("[Studio] Drawer stays open when focus moves into a popup or dialog") {
+	CHECK_FALSE(StudioDrawer::should_auto_hide(true, false, true, false, true));
+}
 
-	// Called by EditorNode when the stock "Editor Layout" menu changed the layouts file.
-	void notify_layouts_changed();
+} // namespace TestStudioDrawer
 
-	StudioPagesBar *get_pages_bar() const { return pages_bar; }
-
-	StudioEditor();
-	~StudioEditor();
-};
+#endif // TOOLS_ENABLED

@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  studio_editor.h                                                       */
+/*  studio_drawer.h                                                       */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -33,52 +33,24 @@
 
 #include "scene/main/node.h"
 
-class Button;
 class Control;
 class EditorBottomPanel;
-class EditorTitleBar;
-class StudioDrawer;
-class StudioPagesBar;
 
-// Root of the Studio editor extensions. Owned by EditorNode; everything Studio adds
-// to the editor UI is created and wired from here so upstream files only need one hook.
-class StudioEditor : public Node {
-	GDCLASS(StudioEditor, Node);
+// Optional "drawer" behavior for the bottom panel: when enabled, the panel closes
+// itself as soon as keyboard focus moves to another part of the main editor window,
+// unless it is pinned. Opening it (Ctrl+J or its tab buttons) works as before.
+class StudioDrawer : public Node {
+	GDCLASS(StudioDrawer, Node);
 
-	static constexpr int PAGE_SHORTCUT_COUNT = 9;
-
-	static inline StudioEditor *singleton = nullptr;
-
-	EditorTitleBar *title_bar = nullptr;
-	Control *title_right_container = nullptr;
 	EditorBottomPanel *bottom_panel = nullptr;
-	StudioPagesBar *pages_bar = nullptr;
-	Button *left_docks_button = nullptr;
-	Button *right_docks_button = nullptr;
-	StudioDrawer *drawer = nullptr;
 
-	void _layouts_changed();
-	void _toggle_dock_region(int p_region);
-	void _update_dock_region_buttons();
-	void _update_icons();
+	void _focus_changed(Control *p_control);
 
 protected:
-	static void _bind_methods();
-	virtual void shortcut_input(const Ref<InputEvent> &p_event) override;
+	void _notification(int p_what);
 
 public:
-	static StudioEditor *get_singleton() { return singleton; }
+	static bool should_auto_hide(bool p_enabled, bool p_pinned, bool p_panel_open, bool p_focus_inside_panel, bool p_focus_in_popup);
 
-	// Registers Studio editor settings and shortcuts. Requires EditorSettings.
-	static void register_settings();
-
-	void setup(EditorTitleBar *p_title_bar, Control *p_title_right_container, EditorBottomPanel *p_bottom_panel);
-
-	// Called by EditorNode when the stock "Editor Layout" menu changed the layouts file.
-	void notify_layouts_changed();
-
-	StudioPagesBar *get_pages_bar() const { return pages_bar; }
-
-	StudioEditor();
-	~StudioEditor();
+	void setup(EditorBottomPanel *p_bottom_panel);
 };

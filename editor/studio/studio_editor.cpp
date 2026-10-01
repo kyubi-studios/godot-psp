@@ -35,6 +35,7 @@
 #include "core/object/callable_mp.h"
 #include "editor/docks/editor_dock_manager.h"
 #include "editor/settings/editor_settings.h"
+#include "editor/studio/studio_drawer.h"
 #include "editor/studio/studio_pages_bar.h"
 #include "scene/gui/button.h"
 #include "scene/gui/control.h"
@@ -42,6 +43,7 @@
 
 void StudioEditor::register_settings() {
 	EDITOR_DEF("interface/studio/pages/auto_save_on_switch", true);
+	EDITOR_DEF("interface/studio/bottom_drawer/auto_hide", false);
 
 	for (int i = 1; i <= PAGE_SHORTCUT_COUNT; i++) {
 		ED_SHORTCUT(vformat("studio/page_%d", i), vformat(TTR("Switch to Layout Page %d"), i), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key(int(Key::KEY_1) + i - 1));
@@ -93,6 +95,10 @@ void StudioEditor::setup(EditorTitleBar *p_title_bar, Control *p_title_right_con
 
 	// Regions can also be shown by focusing one of their docks, so follow the manager's state.
 	EditorDockManager::get_singleton()->connect("dock_region_visibility_changed", callable_mp(this, &StudioEditor::_update_dock_region_buttons).unbind(2));
+
+	drawer = memnew(StudioDrawer);
+	drawer->setup(bottom_panel);
+	add_child(drawer);
 
 	set_process_shortcut_input(true);
 }

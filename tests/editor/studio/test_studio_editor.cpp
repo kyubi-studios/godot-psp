@@ -55,6 +55,8 @@ TEST_CASE("[Editor][Studio] Studio settings and page shortcuts are registered") 
 	StudioEditor::register_settings();
 
 	CHECK(bool(EDITOR_GET("interface/studio/pages/auto_save_on_switch")));
+	CHECK(EditorSettings::get_singleton()->has_setting("interface/studio/bottom_drawer/auto_hide"));
+	CHECK_FALSE(bool(EDITOR_GET("interface/studio/bottom_drawer/auto_hide")));
 
 	Ref<InputEventKey> key;
 	key.instantiate();
