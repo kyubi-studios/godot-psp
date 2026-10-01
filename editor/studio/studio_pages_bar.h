@@ -74,7 +74,8 @@ class StudioPagesBar : public HBoxContainer {
 	Label *name_error = nullptr;
 	NameDialogMode name_dialog_mode = NAME_DIALOG_NEW;
 
-	Ref<ConfigFile> _load_config() const;
+	Ref<ConfigFile> _load_config(Error *r_error = nullptr) const;
+	Ref<ConfigFile> _load_config_for_write();
 	Error _save_config(const Ref<ConfigFile> &p_config);
 	void _layouts_changed();
 
@@ -100,10 +101,12 @@ public:
 	String get_current_page() const;
 
 	void switch_to_page(const String &p_page);
+	// Called when a layout was loaded outside the bar (stock Editor Layout menu).
+	void notify_layout_loaded(const String &p_layout);
 	void switch_to_index(int p_index);
 	Error save_current_layout_as(const String &p_page);
 	Error rename_page(const String &p_from, const String &p_to);
-	void delete_page(const String &p_page);
+	Error delete_page(const String &p_page);
 
 	StudioPagesBar();
 };

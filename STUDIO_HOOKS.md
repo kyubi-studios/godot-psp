@@ -11,7 +11,7 @@ Only the first backticked path of each row is checked; keep one file per row.
 |------|---------|--------------------|
 | `editor/SCsub` | scaffold | Adds `SConscript("studio/SCsub")` so `editor/studio/*.cpp` is built. |
 | `editor/editor_node.h` | scaffold | Forward-declares `StudioEditor` and adds the `studio_editor` member. |
-| `editor/editor_node.cpp` | scaffold | Includes `studio_editor.h`; creates `StudioEditor` after the bottom panel and calls `setup(title_bar, right_menu_hb, bottom_panel)`; connects `layouts_changed` to `_update_layouts_menu`. `_update_layouts_menu()` starts with a `STUDIO: pages` block calling `notify_layouts_changed()`. |
+| `editor/editor_node.cpp` | scaffold | Includes `studio_editor.h`; creates `StudioEditor` after the bottom panel and calls `setup(title_bar, right_menu_hb, bottom_panel)`; connects `layouts_changed` to `_update_layouts_menu`. `_update_layouts_menu()` starts with a `STUDIO: pages` block calling `notify_layouts_changed()`. `_layout_menu_option()` calls `notify_layout_loaded()` after loading Default or a named layout. |
 | `editor/docks/editor_dock_manager.h` | dock regions | `DockRegion` enum, `get_slot_region()`, `set/is_dock_region_visible()`, `dock_region_visible[]` member, `_bind_methods()` declaration. |
-| `editor/docks/editor_dock_manager.cpp` | dock regions | Region API + `dock_region_visibility_changed` signal; `_make_dock_visible()` re-shows a hidden region before focusing a dock in it. |
+| `editor/docks/editor_dock_manager.cpp` | dock regions | Region API + `dock_region_visibility_changed` signal; `_make_dock_visible()` re-shows a hidden region before focusing a dock in it; `save_docks_to_config()` keeps the saved widths of hidden-region columns. |
 | `editor/docks/dock_tab_container.cpp` | dock regions | `update_visibility()` and `can_switch_dock()` also require the slot's region to be visible. |

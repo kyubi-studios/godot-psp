@@ -130,6 +130,12 @@ void StudioEditor::_update_icons() {
 	right_docks_button->set_button_icon(right_docks_button->get_editor_theme_icon(SNAME("Panels2Alt")));
 }
 
+void StudioEditor::notify_layout_loaded(const String &p_layout) {
+	if (pages_bar) {
+		pages_bar->notify_layout_loaded(p_layout);
+	}
+}
+
 void StudioEditor::_layouts_changed() {
 	emit_signal(SNAME("layouts_changed"));
 }

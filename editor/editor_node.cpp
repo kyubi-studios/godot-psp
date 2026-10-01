@@ -6682,12 +6682,18 @@ void EditorNode::_layout_menu_option(int p_id) {
 			if (err == OK && config->has_section("Default")) {
 				editor_dock_manager->load_docks_from_config(config, "Default");
 				_save_editor_layout();
+				if (studio_editor) { // STUDIO: pages
+					studio_editor->notify_layout_loaded("Default");
+				}
 
 				return;
 			}
 
 			editor_dock_manager->load_docks_from_config(default_layout, "docks");
 			_save_editor_layout();
+			if (studio_editor) { // STUDIO: pages
+				studio_editor->notify_layout_loaded(String());
+			}
 		} break;
 
 		default: {
@@ -6697,6 +6703,9 @@ void EditorNode::_layout_menu_option(int p_id) {
 			if (err == OK) {
 				editor_dock_manager->load_docks_from_config(config, editor_layouts->get_item_text(p_id));
 				_save_editor_layout();
+				if (studio_editor) { // STUDIO: pages
+					studio_editor->notify_layout_loaded(editor_layouts->get_item_text(p_id));
+				}
 			}
 		}
 	}

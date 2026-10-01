@@ -76,6 +76,8 @@ public:
 
 	// Called by EditorNode when the stock "Editor Layout" menu changed the layouts file.
 	void notify_layouts_changed();
+	// Called by EditorNode after the stock "Editor Layout" menu loaded a layout.
+	void notify_layout_loaded(const String &p_layout);
 
 	StudioPagesBar *get_pages_bar() const { return pages_bar; }
 

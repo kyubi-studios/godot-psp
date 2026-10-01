@@ -37,6 +37,7 @@ TEST_FORCE_LINK(test_studio_pages_bar)
 
 #include "core/io/config_file.h"
 #include "core/io/dir_access.h"
+#include "core/io/file_access.h"
 #include "editor/studio/studio_pages_bar.h"
 #include "scene/gui/button.h"
 #include "tests/test_utils.h"
@@ -139,6 +140,80 @@ TEST_CASE("[Editor][Studio] Switching to a page index outside the list is ignore
 	bar->switch_to_index(5);
 	bar->switch_to_index(-1);
 	CHECK(bar->get_current_page() == "Anim");
+	memdelete(bar);
+}
+
+TEST_CASE("[Editor][Studio] Loading a layout from the stock menu updates the current page") {
+	StudioPagesBar *bar = memnew(StudioPagesBar);
+	bar->set_config_path(write_layouts());
+	bar->set_current_page("Anim");
+
+	// Loading another page's layout makes it current, so auto-save targets the right page.
+	bar->notify_layout_loaded("Code");
+	CHECK(bar->get_current_page() == "Code");
+
+	// Loading a layout that is not a page (e.g. the built-in Default) clears the current page.
+	bar->notify_layout_loaded("Default");
+	CHECK(bar->get_current_page().is_empty());
+	memdelete(bar);
+}
+
+static Button *find_page_button(StudioPagesBar *p_bar, const String &p_page) {
+	for (int i = 0; i < p_bar->get_child_count(); i++) {
+		Button *button = Object::cast_to<Button>(p_bar->get_child(i));
+		if (button && button->is_toggle_mode() && button->get_text() == p_page && !button->is_queued_for_deletion()) {
+			return button;
+		}
+	}
+	return nullptr;
+}
+
+TEST_CASE("[Editor][Studio] Clicking the active page keeps it active and does not reload it") {
+	StudioPagesBar *bar = memnew(StudioPagesBar);
+	bar->set_config_path(write_layouts());
+	bar->set_current_page("Anim");
+
+	Button *active = find_page_button(bar, "Anim");
+	REQUIRE(active);
+	REQUIRE(active->is_pressed());
+
+	// A click on a pressed toggle button un-presses it and emits "pressed".
+	ERR_PRINT_OFF;
+	active->set_pressed_no_signal(false);
+	active->emit_signal(SceneStringName(pressed));
+	ERR_PRINT_ON;
+
+	CHECK(bar->get_current_page() == "Anim");
+	Button *after = find_page_button(bar, "Anim");
+	REQUIRE(after);
+	CHECK(after->is_pressed());
+	memdelete(bar);
+}
+
+static String read_file(const String &p_path) {
+	Ref<FileAccess> f = FileAccess::open(p_path, FileAccess::READ);
+	return f.is_valid() ? f->get_as_text() : String();
+}
+
+TEST_CASE("[Editor][Studio] A corrupt layouts file is never overwritten") {
+	const String path = TestUtils::get_temp_path("studio_pages_bar_corrupt.cfg");
+	const String garbage = "[Anim\nthis is = = not a config file\n";
+	{
+		Ref<FileAccess> f = FileAccess::open(path, FileAccess::WRITE);
+		REQUIRE(f.is_valid());
+		f->store_string(garbage);
+	}
+
+	StudioPagesBar *bar = memnew(StudioPagesBar);
+	bar->set_config_path(path);
+	ERR_PRINT_OFF;
+	bar->refresh();
+	CHECK(count_page_buttons(bar) == 0);
+	CHECK(bar->rename_page("Anim", "Rigging") != OK);
+	CHECK(bar->delete_page("Anim") != OK);
+	ERR_PRINT_ON;
+
+	CHECK(read_file(path) == garbage);
 	memdelete(bar);
 }
 

@@ -498,6 +498,11 @@ void EditorDockManager::save_docks_to_config(Ref<ConfigFile> p_layout, const Str
 		PackedInt32Array split_offsets = main_hsplit->get_split_offsets();
 		int index = 0;
 		for (int i = 0; i < vsplits.size(); i++) {
+			// STUDIO: dock regions
+			// A column of a hidden region has no width; keep its previously saved width.
+			if (!is_dock_region_visible(get_vsplit_region(i, vsplits.size()))) {
+				continue;
+			}
 			int value = 0;
 			if (vsplits[i]->is_visible() && index < split_offsets.size()) {
 				value = split_offsets[index] / EDSCALE;
@@ -801,6 +806,14 @@ EditorDockManager::DockRegion EditorDockManager::get_slot_region(int p_slot) {
 		default:
 			return DOCK_REGION_NONE;
 	}
+}
+
+EditorDockManager::DockRegion EditorDockManager::get_vsplit_region(int p_index, int p_count) {
+	// Dock columns are added left to right; the first half belongs to the left side.
+	if (p_index < 0 || p_index >= p_count) {
+		return DOCK_REGION_NONE;
+	}
+	return p_index < p_count / 2 ? DOCK_REGION_LEFT : DOCK_REGION_RIGHT;
 }
 
 void EditorDockManager::set_dock_region_visible(DockRegion p_region, bool p_visible) {

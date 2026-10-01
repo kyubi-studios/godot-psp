@@ -140,6 +140,7 @@ public:
 		DOCK_REGION_MAX,
 	};
 	static DockRegion get_slot_region(int p_slot);
+	static DockRegion get_vsplit_region(int p_index, int p_count);
 	void set_dock_region_visible(DockRegion p_region, bool p_visible);
 	bool is_dock_region_visible(DockRegion p_region) const;
 

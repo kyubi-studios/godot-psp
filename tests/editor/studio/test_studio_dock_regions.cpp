@@ -56,6 +56,17 @@ TEST_CASE("[Studio] Dock slots map to their screen region") {
 	CHECK(DM::get_slot_region(EditorDock::DOCK_SLOT_MAX) == DM::DOCK_REGION_NONE);
 }
 
+TEST_CASE("[Studio] Dock columns map to their screen region") {
+	using DM = EditorDockManager;
+	// The editor creates four dock columns: left-left, left-right, right-left, right-right.
+	CHECK(DM::get_vsplit_region(0, 4) == DM::DOCK_REGION_LEFT);
+	CHECK(DM::get_vsplit_region(1, 4) == DM::DOCK_REGION_LEFT);
+	CHECK(DM::get_vsplit_region(2, 4) == DM::DOCK_REGION_RIGHT);
+	CHECK(DM::get_vsplit_region(3, 4) == DM::DOCK_REGION_RIGHT);
+	CHECK(DM::get_vsplit_region(4, 4) == DM::DOCK_REGION_NONE);
+	CHECK(DM::get_vsplit_region(-1, 4) == DM::DOCK_REGION_NONE);
+}
+
 } // namespace TestStudioDockRegions
 
 #endif // TOOLS_ENABLED

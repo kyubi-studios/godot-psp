@@ -44,12 +44,35 @@
 #include "scene/gui/line_edit.h"
 #include "scene/gui/popup_menu.h"
 
-Ref<ConfigFile> StudioPagesBar::_load_config() const {
+Ref<ConfigFile> StudioPagesBar::_load_config(Error *r_error) const {
 	Ref<ConfigFile> config;
 	config.instantiate();
-	// A missing or unreadable file simply means there are no pages yet.
-	if (config->load(config_path) != OK) {
+	Error err = config->load(config_path);
+	if (err == ERR_FILE_NOT_FOUND || err == ERR_FILE_CANT_OPEN) {
+		// No layouts saved yet.
+		err = OK;
+	}
+	if (err != OK) {
 		config.instantiate();
+	}
+	if (r_error) {
+		*r_error = err;
+	}
+	return config;
+}
+
+Ref<ConfigFile> StudioPagesBar::_load_config_for_write() {
+	Error err;
+	Ref<ConfigFile> config = _load_config(&err);
+	if (err != OK) {
+		// Never replace a layouts file we could not parse: it holds every saved layout.
+		const String message = vformat(TTR("Could not read the editor layouts file \"%s\".\nLayout pages can't be changed until it is fixed or removed."), config_path);
+		if (EditorNode::get_singleton()) {
+			EditorNode::get_singleton()->show_warning(message);
+		} else {
+			ERR_PRINT(message);
+		}
+		return Ref<ConfigFile>();
 	}
 	return config;
 }
@@ -117,10 +140,20 @@ String StudioPagesBar::get_current_page() const {
 }
 
 void StudioPagesBar::switch_to_page(const String &p_page) {
+	if (p_page == current_page) {
+		// Re-loading the active page would silently discard dock changes made since it was opened.
+		// Use "Save Current Layout Here" to keep them. Re-press the button (a click un-presses it).
+		refresh();
+		return;
+	}
+
 	EditorDockManager *dock_manager = EditorDockManager::get_singleton();
 	ERR_FAIL_NULL(dock_manager);
 
-	Ref<ConfigFile> config = _load_config();
+	Ref<ConfigFile> config = _load_config_for_write();
+	if (config.is_null()) {
+		return;
+	}
 	if (!config->has_section(p_page)) {
 		refresh();
 		return;
@@ -140,6 +173,11 @@ void StudioPagesBar::switch_to_page(const String &p_page) {
 	emit_signal(SNAME("page_changed"), p_page);
 }
 
+void StudioPagesBar::notify_layout_loaded(const String &p_layout) {
+	pages = StudioLayoutPages::list_pages(_load_config());
+	set_current_page(pages.has(p_layout) ? p_layout : String());
+}
+
 void StudioPagesBar::switch_to_index(int p_index) {
 	if (p_index < 0 || p_index >= pages.size()) {
 		return;
@@ -153,7 +191,10 @@ Error StudioPagesBar::save_current_layout_as(const String &p_page) {
 	const String page = p_page.strip_edges();
 	ERR_FAIL_COND_V(!StudioLayoutPages::validate_page_name(page).is_empty(), ERR_INVALID_PARAMETER);
 
-	Ref<ConfigFile> config = _load_config();
+	Ref<ConfigFile> config = _load_config_for_write();
+	if (config.is_null()) {
+		return ERR_FILE_CORRUPT;
+	}
 	// Drop stale subsections of an overwritten page before saving into it.
 	StudioLayoutPages::erase_page(config, page);
 	dock_manager->save_docks_to_config(config, page);
@@ -166,7 +207,10 @@ Error StudioPagesBar::save_current_layout_as(const String &p_page) {
 
 Error StudioPagesBar::rename_page(const String &p_from, const String &p_to) {
 	const String to = p_to.strip_edges();
-	Ref<ConfigFile> config = _load_config();
+	Ref<ConfigFile> config = _load_config_for_write();
+	if (config.is_null()) {
+		return ERR_FILE_CORRUPT;
+	}
 	Error err = StudioLayoutPages::rename_page(config, p_from, to);
 	if (err != OK) {
 		return err;
@@ -178,12 +222,17 @@ Error StudioPagesBar::rename_page(const String &p_from, const String &p_to) {
 	return err;
 }
 
-void StudioPagesBar::delete_page(const String &p_page) {
-	Ref<ConfigFile> config = _load_config();
+Error StudioPagesBar::delete_page(const String &p_page) {
+	Ref<ConfigFile> config = _load_config_for_write();
+	if (config.is_null()) {
+		return ERR_FILE_CORRUPT;
+	}
 	StudioLayoutPages::erase_page(config, p_page);
-	if (_save_config(config) == OK && current_page == p_page) {
+	Error err = _save_config(config);
+	if (err == OK && current_page == p_page) {
 		set_current_page(String());
 	}
+	return err;
 }
 
 void StudioPagesBar::_page_button_pressed(const String &p_page) {
