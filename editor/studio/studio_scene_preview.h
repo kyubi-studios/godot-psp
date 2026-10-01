@@ -33,7 +33,11 @@
 
 #include "editor/docks/editor_dock.h"
 
+class Button;
 class Camera3D;
+class CheckBox;
+class EditorFileDialog;
+class OptionButton;
 class InputEvent;
 class Label;
 class Node3D;
@@ -58,6 +62,12 @@ class StudioScenePreview : public EditorDock {
 	Node3D *default_lighting = nullptr;
 	Label *message = nullptr;
 
+	OptionButton *picker = nullptr;
+	PackedStringArray picker_items;
+	Button *open_button = nullptr;
+	CheckBox *auto_refresh = nullptr;
+	EditorFileDialog *file_dialog = nullptr;
+
 	// 3D navigation.
 	AABB bounds;
 	float yaw = 0.6;
@@ -70,10 +80,18 @@ class StudioScenePreview : public EditorDock {
 
 	void _clear();
 	void _show_message(const String &p_text);
+	void _fit_view();
 	void _update_camera();
 	void _update_canvas();
 	void _update_render_mode();
 	void _viewport_input(const Ref<InputEvent> &p_event);
+
+	void _update_picker();
+	void _picker_selected(int p_index);
+	void _file_chosen(const String &p_path);
+	void _open_in_editor();
+	void _scene_saved(const String &p_path);
+	void _resources_reimported(const Vector<String> &p_paths);
 
 protected:
 	void _notification(int p_what);
@@ -83,6 +101,12 @@ public:
 	static Transform3D orbit_transform(const AABB &p_bounds, float p_yaw, float p_pitch, float p_distance_scale);
 	// Canvas transform that fits p_content into 90% of p_viewport, then applies zoom and pan.
 	static Transform2D fit_canvas_transform(const Rect2 &p_content, const Size2 &p_viewport, float p_zoom, const Vector2 &p_pan);
+
+	// Open scene tabs first, then recent scenes; unique, non-empty strings only.
+	static PackedStringArray picker_paths(const PackedStringArray &p_open, const Array &p_recent);
+
+	// Connects to editor signals (scene saved, reimport). Called by StudioEditor once the editor exists.
+	void connect_editor_signals();
 
 	void set_scene_path(const String &p_path);
 	String get_scene_path() const { return scene_path; }

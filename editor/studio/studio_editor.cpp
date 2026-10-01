@@ -40,6 +40,7 @@
 #include "editor/studio/studio_drawer.h"
 #include "editor/studio/studio_pages_bar.h"
 #include "editor/studio/studio_recent_button.h"
+#include "editor/studio/studio_scene_preview.h"
 #include "scene/gui/button.h"
 #include "scene/gui/control.h"
 #include "scene/main/viewport.h"
@@ -107,6 +108,11 @@ void StudioEditor::setup(EditorTitleBar *p_title_bar, Control *p_title_right_con
 
 	scene_cache.set_capacity(EDITOR_GET("interface/studio/scene_cache/max_scenes"));
 	EditorSettings::get_singleton()->connect("settings_changed", callable_mp(this, &StudioEditor::_editor_settings_changed));
+
+	scene_preview = memnew(StudioScenePreview);
+	EditorDockManager::get_singleton()->add_dock(scene_preview);
+	// EditorNode's own signals are registered only after its constructor (where setup() runs) returns.
+	callable_mp(scene_preview, &StudioScenePreview::connect_editor_signals).call_deferred();
 
 	drawer = memnew(StudioDrawer);
 	drawer->setup(bottom_panel);

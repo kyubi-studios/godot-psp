@@ -40,6 +40,7 @@ class EditorBottomPanel;
 class EditorTitleBar;
 class StudioDrawer;
 class StudioPagesBar;
+class StudioScenePreview;
 
 // Root of the Studio editor extensions. Owned by EditorNode; everything Studio adds
 // to the editor UI is created and wired from here so upstream files only need one hook.
@@ -57,6 +58,7 @@ class StudioEditor : public Node {
 	Button *left_docks_button = nullptr;
 	Button *right_docks_button = nullptr;
 	StudioDrawer *drawer = nullptr;
+	StudioScenePreview *scene_preview = nullptr;
 	StudioSceneCache scene_cache;
 
 	void _layouts_changed();

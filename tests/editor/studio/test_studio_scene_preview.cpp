@@ -91,6 +91,16 @@ TEST_CASE("[Studio] Canvas fit handles empty content and zero-size viewports") {
 	CHECK(Math::is_finite(b.get_scale().x));
 }
 
+TEST_CASE("[Studio] Preview picker lists open scenes first, then recent ones, without duplicates") {
+	PackedStringArray open = { "res://level.tscn", "", "res://enemy.tscn" };
+	Array recent = { "res://enemy.tscn", "res://menu.tscn", 7 };
+	PackedStringArray list = StudioScenePreview::picker_paths(open, recent);
+	REQUIRE(list.size() == 3);
+	CHECK(list[0] == "res://level.tscn");
+	CHECK(list[1] == "res://enemy.tscn");
+	CHECK(list[2] == "res://menu.tscn");
+}
+
 static String write_scene(const String &p_name, const String &p_text) {
 	const String path = TestUtils::get_temp_path(p_name);
 	Ref<FileAccess> f = FileAccess::open(path, FileAccess::WRITE);

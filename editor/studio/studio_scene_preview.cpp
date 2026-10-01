@@ -40,7 +40,14 @@
 #include "scene/3d/light_3d.h"
 #include "scene/3d/visual_instance_3d.h"
 #include "scene/3d/world_environment.h"
+#include "editor/editor_data.h"
+#include "editor/editor_node.h"
+#include "editor/file_system/editor_file_system.h"
+#include "editor/gui/editor_file_dialog.h"
+#include "editor/settings/editor_settings.h"
 #include "scene/gui/box_container.h"
+#include "scene/gui/check_box.h"
+#include "scene/gui/option_button.h"
 #include "scene/gui/control.h"
 #include "scene/gui/label.h"
 #include "scene/gui/subviewport_container.h"
@@ -146,8 +153,96 @@ void StudioScenePreview::_show_message(const String &p_text) {
 	message->set_visible(!p_text.is_empty());
 }
 
+PackedStringArray StudioScenePreview::picker_paths(const PackedStringArray &p_open, const Array &p_recent) {
+	PackedStringArray result;
+	for (const String &path : p_open) {
+		if (!path.is_empty() && !result.has(path)) {
+			result.push_back(path);
+		}
+	}
+	for (const Variant &entry : p_recent) {
+		if (entry.get_type() == Variant::STRING) {
+			const String path = entry;
+			if (!path.is_empty() && !result.has(path)) {
+				result.push_back(path);
+			}
+		}
+	}
+	return result;
+}
+
 void StudioScenePreview::set_scene_path(const String &p_path) {
 	scene_path = p_path;
+	if (EditorSettings::get_singleton() && EditorNode::get_singleton()) {
+		EditorSettings::get_singleton()->set_project_metadata("studio", "preview_scene", scene_path);
+	}
+}
+
+void StudioScenePreview::_update_picker() {
+	PackedStringArray open;
+	EditorData &data = EditorNode::get_editor_data();
+	for (int i = 0; i < data.get_edited_scene_count(); i++) {
+		open.push_back(data.get_scene_path(i));
+	}
+	picker_items = picker_paths(open, EditorSettings::get_singleton()->get_project_metadata("recent_files", "scenes", Array()));
+	if (!scene_path.is_empty() && !picker_items.has(scene_path)) {
+		picker_items.insert(0, scene_path);
+	}
+
+	picker->clear();
+	for (const String &path : picker_items) {
+		picker->add_item(path.get_file());
+		picker->set_item_tooltip(-1, path);
+	}
+	picker->add_separator();
+	picker->add_item(TTR("Choose File..."));
+	picker->select(picker_items.find(scene_path));
+}
+
+void StudioScenePreview::_picker_selected(int p_index) {
+	if (p_index >= 0 && p_index < picker_items.size()) {
+		set_scene_path(picker_items[p_index]);
+		refresh();
+	} else {
+		file_dialog->popup_file_dialog();
+	}
+}
+
+void StudioScenePreview::_file_chosen(const String &p_path) {
+	set_scene_path(p_path);
+	refresh();
+	_update_picker();
+}
+
+void StudioScenePreview::_open_in_editor() {
+	if (!scene_path.is_empty()) {
+		EditorNode::get_singleton()->load_scene(scene_path);
+	}
+}
+
+void StudioScenePreview::_scene_saved(const String &p_path) {
+	if (auto_refresh->is_pressed() && p_path == scene_path) {
+		refresh();
+	}
+}
+
+void StudioScenePreview::_resources_reimported(const Vector<String> &p_paths) {
+	// Reimported dependencies (textures, models) change what the preview shows.
+	if (auto_refresh->is_pressed() && preview_root && is_visible_in_tree()) {
+		refresh();
+	}
+}
+
+void StudioScenePreview::connect_editor_signals() {
+	EditorNode::get_singleton()->connect("scene_saved", callable_mp(this, &StudioScenePreview::_scene_saved));
+	EditorFileSystem::get_singleton()->connect("resources_reimported", callable_mp(this, &StudioScenePreview::_resources_reimported));
+	picker->get_popup()->connect("about_to_popup", callable_mp(this, &StudioScenePreview::_update_picker));
+	const String saved = EditorSettings::get_singleton()->get_project_metadata("studio", "preview_scene", String());
+	if (!saved.is_empty()) {
+		scene_path = saved;
+		_update_picker();
+		callable_mp(this, &StudioScenePreview::refresh).call_deferred();
+	}
 }
 
 void StudioScenePreview::refresh() {
@@ -179,23 +274,38 @@ void StudioScenePreview::refresh() {
 
 	preview_is_3d = Object::cast_to<Node3D>(preview_root) != nullptr;
 	if (preview_is_3d) {
-		bool found = false;
-		bounds = AABB();
-		_collect_bounds_3d(preview_root, Transform3D(), bounds, found);
 		const bool has_light = _has_node_of_type(preview_root, SNAME("Light3D"));
 		const bool has_env = _has_node_of_type(preview_root, SNAME("WorldEnvironment"));
 		default_lighting->get_child(0)->set("visible", !has_light);
 		default_lighting->get_child(1)->set("environment", has_env ? Variant() : default_lighting->get_child(1)->get_meta("default_environment"));
 		default_lighting->set_visible(true);
 		camera->set_current(true);
-		_update_camera();
 	} else {
 		default_lighting->set_visible(false);
-		bool found = false;
+	}
+	zoom = 1.0;
+	pan = Vector2();
+	distance_scale = 1.2;
+	_fit_view();
+	// Some nodes (e.g. CSG shapes) build their meshes deferred after entering the tree; fit again then.
+	callable_mp(this, &StudioScenePreview::_fit_view).call_deferred();
+}
+
+void StudioScenePreview::_fit_view() {
+	if (!preview_root) {
+		return;
+	}
+	bool found = false;
+	if (preview_is_3d) {
+		bounds = AABB();
+		_collect_bounds_3d(preview_root, Transform3D(), bounds, found);
+		if (!found || bounds.size.length() < 0.01) {
+			bounds = AABB(bounds.get_center() - Vector3(2, 2, 2), Vector3(4, 4, 4)); // Nothing visible yet.
+		}
+		_update_camera();
+	} else {
 		content_rect = Rect2();
 		_collect_bounds_2d(preview_root, Transform2D(), content_rect, found);
-		zoom = 1.0;
-		pan = Vector2();
 		_update_canvas();
 	}
 }
@@ -270,6 +380,44 @@ StudioScenePreview::StudioScenePreview() {
 
 	main_vb = memnew(VBoxContainer);
 	add_child(main_vb);
+
+	HBoxContainer *toolbar = memnew(HBoxContainer);
+	main_vb->add_child(toolbar);
+
+	picker = memnew(OptionButton);
+	picker->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	picker->set_clip_text(true);
+	picker->set_fit_to_longest_item(false);
+	picker->set_tooltip_text(TTRC("Scene to preview"));
+	picker->set_accessibility_name(TTRC("Scene to preview"));
+	picker->connect(SceneStringName(item_selected), callable_mp(this, &StudioScenePreview::_picker_selected));
+	toolbar->add_child(picker);
+
+	Button *refresh_button = memnew(Button);
+	refresh_button->set_flat(true);
+	refresh_button->set_text(TTRC("Reload"));
+	refresh_button->set_tooltip_text(TTRC("Reload the previewed scene from disk."));
+	refresh_button->connect(SceneStringName(pressed), callable_mp(this, &StudioScenePreview::refresh));
+	toolbar->add_child(refresh_button);
+
+	open_button = memnew(Button);
+	open_button->set_flat(true);
+	open_button->set_text(TTRC("Edit"));
+	open_button->set_tooltip_text(TTRC("Open the previewed scene in the editor."));
+	open_button->connect(SceneStringName(pressed), callable_mp(this, &StudioScenePreview::_open_in_editor));
+	toolbar->add_child(open_button);
+
+	auto_refresh = memnew(CheckBox);
+	auto_refresh->set_text(TTRC("Auto"));
+	auto_refresh->set_pressed(true);
+	auto_refresh->set_tooltip_text(TTRC("Reload automatically when the scene is saved or its resources are reimported."));
+	toolbar->add_child(auto_refresh);
+
+	file_dialog = memnew(EditorFileDialog);
+	file_dialog->set_file_mode(EditorFileDialog::FILE_MODE_OPEN_FILE);
+	file_dialog->add_filter("*.tscn,*.scn", TTR("Scenes"));
+	file_dialog->connect("file_selected", callable_mp(this, &StudioScenePreview::_file_chosen));
+	add_child(file_dialog);
 
 	container = memnew(SubViewportContainer);
 	container->set_stretch(true);
