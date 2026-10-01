@@ -12,6 +12,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import make_project  # noqa: E402
+import run_bench  # noqa: E402
 
 
 class WritePngTest(unittest.TestCase):
@@ -76,6 +77,35 @@ class GenerateTest(unittest.TestCase):
             with open(keep) as f:
                 self.assertEqual(f.read(), "keep me")
             self.assertFalse(os.path.exists(os.path.join(tmp, "project.godot")))
+
+
+class RunBenchHelpersTest(unittest.TestCase):
+    def test_median_odd_and_even(self):
+        self.assertEqual(run_bench.median([3.0, 1.0, 2.0]), 2.0)
+        self.assertEqual(run_bench.median([4.0, 1.0, 2.0, 3.0]), 2.5)
+
+    def test_parse_load_ms(self):
+        self.assertEqual(run_bench.parse_load_ms("noise\nBENCH_LOAD_MS=12.500\nmore"), 12.5)
+        self.assertIsNone(run_bench.parse_load_ms("BENCH_LOAD_FAILED"))
+
+    def test_summarize_excludes_failed_runs(self):
+        summary = run_bench.summarize([10.0, None, 30.0, 20.0])
+        self.assertEqual(summary["median"], 20.0)
+        self.assertEqual(summary["min"], 10.0)
+        self.assertEqual(summary["max"], 30.0)
+        self.assertEqual(summary["runs"], 3)
+        self.assertEqual(summary["failed"], 1)
+
+    def test_summarize_all_failed(self):
+        summary = run_bench.summarize([None, None])
+        self.assertIsNone(summary["median"])
+        self.assertEqual(summary["failed"], 2)
+        self.assertEqual(summary["runs"], 0)
+
+    def test_failed_process_is_not_timed(self):
+        # A crashing command must produce None, never a duration.
+        self.assertIsNone(run_bench.time_command([sys.executable, "-c", "import sys; sys.exit(3)"], timeout=30))
+        self.assertIsNotNone(run_bench.time_command([sys.executable, "-c", "pass"], timeout=30))
 
 
 if __name__ == "__main__":
