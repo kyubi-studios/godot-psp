@@ -4934,6 +4934,10 @@ Error EditorNode::load_scene(const String &p_scene, bool p_ignore_broken_deps, b
 
 	new_scene->set_scene_instance_state(Ref<SceneState>());
 
+	if (studio_editor) { // STUDIO: scene cache
+		studio_editor->notify_scene_opened(lpath);
+	}
+
 	if (!restoring_scenes) {
 		save_editor_layout_delayed();
 		_add_to_recent_scenes(lpath);

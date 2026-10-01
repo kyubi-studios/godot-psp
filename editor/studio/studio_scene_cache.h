@@ -58,5 +58,8 @@ public:
 	void clear();
 
 	PackedStringArray get_paths() const;
+
+	// Loads a scene that is about to be closed so its dependencies stay alive.
+	static Ref<Resource> load_for_cache(const String &p_path);
 	int size() const { return entries.size(); }
 };

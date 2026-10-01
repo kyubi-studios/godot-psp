@@ -84,6 +84,8 @@ public:
 
 	// Called by EditorNode right before a scene tab is closed, while the scene is still loaded.
 	void notify_scene_closing(const String &p_path);
+	// Called by EditorNode after a scene was opened successfully.
+	void notify_scene_opened(const String &p_path);
 	const StudioSceneCache &get_scene_cache() const { return scene_cache; }
 
 	StudioPagesBar *get_pages_bar() const { return pages_bar; }

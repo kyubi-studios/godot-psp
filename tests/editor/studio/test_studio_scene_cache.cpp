@@ -35,7 +35,10 @@ TEST_FORCE_LINK(test_studio_scene_cache)
 
 #ifdef TOOLS_ENABLED
 
+#include "core/io/file_access.h"
 #include "core/io/resource.h"
+#include "core/io/resource_loader.h"
+#include "tests/test_utils.h"
 #include "editor/studio/studio_scene_cache.h"
 
 namespace TestStudioSceneCache {
@@ -113,6 +116,24 @@ TEST_CASE("[Studio] Evicted and erased resources are released") {
 	cache.erase("res://b.tscn");
 	CHECK(b->get_reference_count() == 1);
 	CHECK(cache.size() == 0);
+}
+
+TEST_CASE("[SceneTree][Studio] Cached scenes are not registered in the resource cache") {
+	// Other scenes that instance this one must keep loading it fresh from disk.
+	const String path = TestUtils::get_temp_path("studio_cache_probe.tscn");
+	{
+		Ref<FileAccess> f = FileAccess::open(path, FileAccess::WRITE);
+		REQUIRE(f.is_valid());
+		f->store_string("[gd_scene format=3]\n\n[sub_resource type=\"Gradient\" id=\"g\"]\n\n[node name=\"Root\" type=\"Node\"]\nmetadata/g = SubResource(\"g\")\n");
+	}
+	Ref<Resource> scene = StudioSceneCache::load_for_cache(path);
+	REQUIRE(scene.is_valid());
+	CHECK_FALSE(ResourceCache::has(path));
+	CHECK_FALSE(ResourceCache::has(path + "::g"));
+}
+
+TEST_CASE("[Studio] Loading a missing scene for the cache returns null quietly") {
+	CHECK(StudioSceneCache::load_for_cache(TestUtils::get_temp_path("studio_cache_missing.tscn")).is_null());
 }
 
 } // namespace TestStudioSceneCache

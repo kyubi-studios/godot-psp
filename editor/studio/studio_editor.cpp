@@ -152,12 +152,18 @@ void StudioEditor::notify_scene_closing(const String &p_path) {
 	if (p_path.is_empty() || scene_cache.get_capacity() == 0) {
 		return;
 	}
+	// Note: quitting, restarting and reloading the project never reach this (EditorNode skips
+	// _remove_scene() while closing the editor); this is only a cheap extra safety net.
 	if (EditorNode::get_singleton() && EditorNode::get_singleton()->is_exiting()) {
 		return;
 	}
 	// The scene's dependencies are still loaded, so this only re-reads the scene file itself.
-	Ref<Resource> scene = ResourceLoader::load(p_path, "", ResourceFormatLoader::CACHE_MODE_REUSE);
-	scene_cache.put(p_path, scene);
+	scene_cache.put(p_path, StudioSceneCache::load_for_cache(p_path));
+}
+
+void StudioEditor::notify_scene_opened(const String &p_path) {
+	// An open scene keeps its own dependencies alive; free the slot for scenes that are really closed.
+	scene_cache.erase(p_path);
 }
 
 void StudioEditor::_editor_settings_changed() {

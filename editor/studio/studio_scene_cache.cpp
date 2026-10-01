@@ -31,6 +31,9 @@
 
 #include "studio_scene_cache.h"
 
+#include "core/io/file_access.h"
+#include "core/io/resource_loader.h"
+
 int StudioSceneCache::_find(const String &p_path) const {
 	for (uint32_t i = 0; i < entries.size(); i++) {
 		if (entries[i].path == p_path) {
@@ -81,4 +84,15 @@ PackedStringArray StudioSceneCache::get_paths() const {
 		paths.push_back(entry.path);
 	}
 	return paths;
+}
+
+Ref<Resource> StudioSceneCache::load_for_cache(const String &p_path) {
+	if (!FileAccess::exists(p_path)) {
+		return Ref<Resource>();
+	}
+	// CACHE_MODE_IGNORE: the scene and its built-in subresources are read fresh from disk and are NOT
+	// registered in the resource cache, so other scenes instancing this one still load it from disk
+	// (never a stale or discarded in-memory version). External dependencies are still reused from the
+	// cache, which is what keeps them alive for a fast reopen.
+	return ResourceLoader::load(p_path, "", ResourceFormatLoader::CACHE_MODE_IGNORE);
 }
