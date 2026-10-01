@@ -5,7 +5,7 @@ The project contains many PNG textures (texture importer, threaded), glTF models
 (scene importer) and one large scene referencing the textures, plus a script that
 measures how long the scene takes to load.
 
-Usage: make_project.py <dir> [--textures 400] [--texture-size 256] [--gltf 20]
+Usage: make_project.py <dir> [--textures 1000] [--texture-size 512] [--gltf 50]
                              [--scene-nodes 3000] [--seed 1] [--force]
 """
 
@@ -53,21 +53,17 @@ def _png_chunk(kind, data):
 
 
 def write_png(path, width, height, seed):
-    """Write an RGBA PNG with seeded noisy gradients (compresses like real art, not like flat color)."""
+    """Write an RGBA PNG made of seeded noise rows (compresses like real art, not like flat color)."""
     rng = random.Random(seed)
-    base = [rng.randrange(256) for _ in range(4)]
+    row_bytes = width * 4
+    # A pool of noise to slice rows from: fast in pure Python and still incompressible-ish.
+    pool = bytearray(rng.randbytes(row_bytes * 32))
+    pool[3::4] = b"\xff" * (len(pool[3::4]))  # Opaque alpha.
     rows = bytearray()
     for y in range(height):
+        offset = (y * 2654435761 + seed) % (row_bytes * 31) & ~3
         rows.append(0)  # Filter type: none.
-        for x in range(width):
-            rows += bytes(
-                (
-                    (base[0] + x * 3 + rng.randrange(8)) & 0xFF,
-                    (base[1] + y * 3 + rng.randrange(8)) & 0xFF,
-                    (base[2] + (x ^ y) + rng.randrange(8)) & 0xFF,
-                    255,
-                )
-            )
+        rows += pool[offset : offset + row_bytes]
     ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     data = b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", ihdr) + _png_chunk(b"IDAT", zlib.compress(bytes(rows), 6))
     data += _png_chunk(b"IEND", b"")
@@ -167,9 +163,9 @@ def generate(out_dir, textures, texture_size, gltf, scene_nodes, seed, force):
 def main(argv):
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("dir")
-    parser.add_argument("--textures", type=int, default=400)
-    parser.add_argument("--texture-size", type=int, default=256)
-    parser.add_argument("--gltf", type=int, default=20)
+    parser.add_argument("--textures", type=int, default=1000)
+    parser.add_argument("--texture-size", type=int, default=512)
+    parser.add_argument("--gltf", type=int, default=50)
     parser.add_argument("--scene-nodes", type=int, default=3000)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--force", action="store_true", help="replace a non-empty output directory")
