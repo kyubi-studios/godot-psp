@@ -80,11 +80,11 @@ TEST_CASE("[Editor][Studio] Dock region toggle shortcuts are registered") {
 	key->set_alt_pressed(true);
 	key->set_pressed(true);
 
-	key->set_keycode(Key::BRACKETLEFT);
+	key->set_keycode(Key::COMMA);
 	CHECK(ED_IS_SHORTCUT("studio/toggle_left_docks", key));
 	CHECK_FALSE(ED_IS_SHORTCUT("studio/toggle_right_docks", key));
 
-	key->set_keycode(Key::BRACKETRIGHT);
+	key->set_keycode(Key::PERIOD);
 	CHECK(ED_IS_SHORTCUT("studio/toggle_right_docks", key));
 }
 

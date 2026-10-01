@@ -135,7 +135,7 @@ Davranış:
 - [ ] **Step 2:** Build → FAIL.
 - [ ] **Step 3:** Uygula + hook'ları `STUDIO_HOOKS.md`'ye ekle.
 - [ ] **Step 4:** Testler, smoke, check_hooks PASS.
-- [ ] **Step 5:** Commit `studio: per-region dock visibility toggles (Ctrl+Alt+[ / ])`.
+- [ ] **Step 5:** Commit `studio: per-region dock visibility toggles (Ctrl+Alt+, / .)`.
 
 ### Task 6: Faz 1 — Alt drawer (otomatik gizlenen alt panel)
 

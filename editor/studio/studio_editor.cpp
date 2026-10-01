@@ -49,8 +49,8 @@ void StudioEditor::register_settings() {
 		ED_SHORTCUT(vformat("studio/page_%d", i), vformat(TTR("Switch to Layout Page %d"), i), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key(int(Key::KEY_1) + i - 1));
 	}
 
-	ED_SHORTCUT("studio/toggle_left_docks", TTRC("Toggle Left Docks"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key::BRACKETLEFT);
-	ED_SHORTCUT("studio/toggle_right_docks", TTRC("Toggle Right Docks"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key::BRACKETRIGHT);
+	ED_SHORTCUT("studio/toggle_left_docks", TTRC("Toggle Left Docks"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key::COMMA);
+	ED_SHORTCUT("studio/toggle_right_docks", TTRC("Toggle Right Docks"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key::PERIOD);
 }
 
 void StudioEditor::setup(EditorTitleBar *p_title_bar, Control *p_title_right_container, EditorBottomPanel *p_bottom_panel) {
