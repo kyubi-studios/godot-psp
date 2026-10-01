@@ -94,6 +94,14 @@ doğrulama; smoke test ile editörün sayfa değiştirip kapanması.
 
 ## 5. Faz 2 — Sekme iyileştirmeleri
 
+> **Kapsam güncellemesi (2026-10-01, Faz 1 sonrası kod incelemesi):** Godot 4.7'de
+> `Ctrl+Shift+T` sahne (`editor/reopen_closed_scene`, `prev_closed_scenes`) ve script
+> (`script_editor/reopen_closed_script`) için zaten var; FileSystemDock taşıma/yeniden
+> adlandırmada açık sahne yollarını zaten güncelliyor (`filesystem_dock.cpp`
+> `_update_resource_paths_after_move`). Bu iki madde Faz 2'den çıkarıldı. Sahne cache'i
+> Faz 3 benchmark'ında sahne açma süresi ölçüldükten sonra (kazanç kanıtlanırsa) yapılır;
+> bu yüzden Faz 3'ün benchmark altyapısı (Faz 3a) Faz 2'den önce gelir.
+
 - **Kapatılan sekmeyi geri aç** (`Ctrl+Shift+T`): sahne, script ve yardım sekmeleri için
   ortak LIFO yığın (`StudioClosedTabStack`, en fazla 20 kayıt; tür + yol + sekme indeksi).
   Hook: `EditorNode::_scene_tab_closed`, ScriptEditor sekme kapatma.
