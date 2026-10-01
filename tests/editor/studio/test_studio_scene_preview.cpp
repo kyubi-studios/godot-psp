@@ -35,7 +35,12 @@ TEST_FORCE_LINK(test_studio_scene_preview)
 
 #ifdef TOOLS_ENABLED
 
+#include "core/io/file_access.h"
 #include "editor/studio/studio_scene_preview.h"
+#include "scene/2d/node_2d.h"
+#include "scene/3d/node_3d.h"
+#include "tests/test_tools.h"
+#include "tests/test_utils.h"
 
 namespace TestStudioScenePreview {
 
@@ -84,6 +89,68 @@ TEST_CASE("[Studio] Canvas fit handles empty content and zero-size viewports") {
 	const Transform2D b = StudioScenePreview::fit_canvas_transform(Rect2(0, 0, 10, 10), Size2(), 1.0, Vector2());
 	CHECK(b.get_origin().is_finite());
 	CHECK(Math::is_finite(b.get_scale().x));
+}
+
+static String write_scene(const String &p_name, const String &p_text) {
+	const String path = TestUtils::get_temp_path(p_name);
+	Ref<FileAccess> f = FileAccess::open(path, FileAccess::WRITE);
+	REQUIRE(f.is_valid());
+	f->store_string(p_text);
+	return path;
+}
+
+static const char *SCENE_3D = "[gd_scene format=3]\n\n[node name=\"Level\" type=\"Node3D\"]\n\n[node name=\"Box\" type=\"CSGBox3D\" parent=\".\"]\n";
+static const char *SCENE_2D = "[gd_scene format=3]\n\n[node name=\"Menu\" type=\"Node2D\"]\n\n[node name=\"Child\" type=\"Node2D\" parent=\".\"]\nposition = Vector2(100, 50)\n";
+
+TEST_CASE("[Editor][Studio] Scene preview instantiates a 3D scene") {
+	StudioScenePreview *preview = memnew(StudioScenePreview);
+	preview->set_scene_path(write_scene("studio_preview_3d.tscn", SCENE_3D));
+	preview->refresh();
+	CHECK(preview->get_error().is_empty());
+	REQUIRE(preview->get_preview_root() != nullptr);
+	CHECK(Object::cast_to<Node3D>(preview->get_preview_root()) != nullptr);
+	CHECK(preview->is_3d());
+	memdelete(preview);
+}
+
+TEST_CASE("[Editor][Studio] Scene preview instantiates a 2D scene") {
+	StudioScenePreview *preview = memnew(StudioScenePreview);
+	preview->set_scene_path(write_scene("studio_preview_2d.tscn", SCENE_2D));
+	ErrorDetector errors;
+	preview->refresh();
+	CHECK_FALSE(errors.has_error);
+	REQUIRE(preview->get_preview_root() != nullptr);
+	CHECK(Object::cast_to<Node2D>(preview->get_preview_root()) != nullptr);
+	CHECK_FALSE(preview->is_3d());
+	memdelete(preview);
+}
+
+TEST_CASE("[Editor][Studio] Refreshing the preview frees the previous instance") {
+	StudioScenePreview *preview = memnew(StudioScenePreview);
+	preview->set_scene_path(write_scene("studio_preview_3d.tscn", SCENE_3D));
+	preview->refresh();
+	REQUIRE(preview->get_preview_root() != nullptr);
+	const ObjectID old_id = preview->get_preview_root()->get_instance_id();
+	preview->refresh();
+	CHECK(ObjectDB::get_instance(old_id) == nullptr);
+	CHECK(preview->get_preview_root() != nullptr);
+	memdelete(preview);
+}
+
+TEST_CASE("[Editor][Studio] Previewing a missing or broken file shows an error") {
+	StudioScenePreview *preview = memnew(StudioScenePreview);
+	ERR_PRINT_OFF;
+	preview->set_scene_path(TestUtils::get_temp_path("studio_preview_missing.tscn"));
+	preview->refresh();
+	CHECK_FALSE(preview->get_error().is_empty());
+	CHECK(preview->get_preview_root() == nullptr);
+
+	preview->set_scene_path(write_scene("studio_preview_broken.tscn", "this is not a scene"));
+	preview->refresh();
+	ERR_PRINT_ON;
+	CHECK_FALSE(preview->get_error().is_empty());
+	CHECK(preview->get_preview_root() == nullptr);
+	memdelete(preview);
 }
 
 } // namespace TestStudioScenePreview
