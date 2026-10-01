@@ -35,6 +35,8 @@ TEST_FORCE_LINK(test_studio_editor)
 
 #ifdef TOOLS_ENABLED
 
+#include "core/input/input_event.h"
+#include "editor/settings/editor_settings.h"
 #include "editor/studio/studio_editor.h"
 
 namespace TestStudioEditor {
@@ -47,6 +49,24 @@ TEST_CASE("[Studio] StudioEditor singleton lifetime") {
 
 	memdelete(studio);
 	CHECK(StudioEditor::get_singleton() == nullptr);
+}
+
+TEST_CASE("[Editor][Studio] Studio settings and page shortcuts are registered") {
+	StudioEditor::register_settings();
+
+	CHECK(bool(EDITOR_GET("interface/studio/pages/auto_save_on_switch")));
+
+	Ref<InputEventKey> key;
+	key.instantiate();
+	key->set_keycode(Key::KEY_3);
+	key->set_ctrl_pressed(true);
+	key->set_alt_pressed(true);
+	key->set_pressed(true);
+	CHECK(ED_IS_SHORTCUT("studio/page_3", key));
+	CHECK_FALSE(ED_IS_SHORTCUT("studio/page_2", key));
+
+	key->set_keycode(Key::KEY_9);
+	CHECK(ED_IS_SHORTCUT("studio/page_9", key));
 }
 
 } // namespace TestStudioEditor

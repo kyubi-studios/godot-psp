@@ -6625,6 +6625,11 @@ void EditorNode::cleanup() {
 }
 
 void EditorNode::_update_layouts_menu() {
+	// STUDIO: pages
+	if (studio_editor) {
+		studio_editor->notify_layouts_changed();
+	}
+
 	editor_layouts->clear();
 	overridden_default_layout = false;
 
@@ -9250,6 +9255,7 @@ EditorNode::EditorNode() {
 	studio_editor = memnew(StudioEditor);
 	add_child(studio_editor);
 	studio_editor->setup(title_bar, right_menu_hb, bottom_panel);
+	studio_editor->connect("layouts_changed", callable_mp(this, &EditorNode::_update_layouts_menu));
 
 	log = memnew(EditorLog);
 	editor_dock_manager->add_dock(log);

@@ -11,4 +11,4 @@ Only the first backticked path of each row is checked; keep one file per row.
 |------|---------|--------------------|
 | `editor/SCsub` | scaffold | Adds `SConscript("studio/SCsub")` so `editor/studio/*.cpp` is built. |
 | `editor/editor_node.h` | scaffold | Forward-declares `StudioEditor` and adds the `studio_editor` member. |
-| `editor/editor_node.cpp` | scaffold | Includes `studio_editor.h`; creates `StudioEditor` after the bottom panel and calls `setup(title_bar, right_menu_hb, bottom_panel)`. |
+| `editor/editor_node.cpp` | scaffold | Includes `studio_editor.h`; creates `StudioEditor` after the bottom panel and calls `setup(title_bar, right_menu_hb, bottom_panel)`; connects `layouts_changed` to `_update_layouts_menu`. `_update_layouts_menu()` starts with a `STUDIO: pages` block calling `notify_layouts_changed()`. |

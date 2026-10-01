@@ -29,6 +29,19 @@ LOG="$WORK/editor.log"
 # Keep editor settings/caches out of the user's home.
 export XDG_CONFIG_HOME="$WORK/config" XDG_DATA_HOME="$WORK/data" XDG_CACHE_HOME="$WORK/cache"
 
+# Two layout pages so the Studio pages bar starts with real data.
+mkdir -p "$XDG_CONFIG_HOME/godot"
+cat > "$XDG_CONFIG_HOME/godot/editor_layouts.cfg" <<'LAYOUTS'
+[Scene Work]
+
+dock_1="Scene,Import"
+dock_5="Inspector"
+
+[Code Work]
+
+dock_3="FileSystem"
+LAYOUTS
+
 # First run imports the project (creates .godot/); second run is a normal editor session.
 for pass in import editor; do
 	if [ "$pass" = import ]; then

@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  studio_editor.cpp                                                     */
+/*  studio_pages_bar.h                                                    */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -29,74 +29,81 @@
 /**************************************************************************/
 
 
-#include "studio_editor.h"
+#pragma once
 
-#include "core/input/input_event.h"
-#include "core/object/callable_mp.h"
-#include "editor/settings/editor_settings.h"
-#include "editor/studio/studio_pages_bar.h"
-#include "scene/gui/control.h"
-#include "scene/main/viewport.h"
+#include "core/io/config_file.h"
+#include "scene/gui/box_container.h"
 
-void StudioEditor::register_settings() {
-	EDITOR_DEF("interface/studio/pages/auto_save_on_switch", true);
+class Button;
+class ButtonGroup;
+class ConfirmationDialog;
+class InputEvent;
+class Label;
+class LineEdit;
+class PopupMenu;
 
-	for (int i = 1; i <= PAGE_SHORTCUT_COUNT; i++) {
-		ED_SHORTCUT(vformat("studio/page_%d", i), vformat(TTR("Switch to Layout Page %d"), i), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key(int(Key::KEY_1) + i - 1));
-	}
-}
+// Title bar strip with one button per layout page (see StudioLayoutPages).
+// Clicking a page saves the current dock layout into the active page (optional)
+// and loads the clicked one; open scenes and tabs are left untouched.
+class StudioPagesBar : public HBoxContainer {
+	GDCLASS(StudioPagesBar, HBoxContainer);
 
-void StudioEditor::setup(EditorTitleBar *p_title_bar, Control *p_title_right_container, EditorBottomPanel *p_bottom_panel) {
-	title_bar = p_title_bar;
-	title_right_container = p_title_right_container;
-	bottom_panel = p_bottom_panel;
+	enum ContextOption {
+		CONTEXT_SAVE_HERE,
+		CONTEXT_RENAME,
+		CONTEXT_DELETE,
+	};
 
-	register_settings();
+	enum NameDialogMode {
+		NAME_DIALOG_NEW,
+		NAME_DIALOG_RENAME,
+	};
 
-	pages_bar = memnew(StudioPagesBar);
-	pages_bar->connect("layouts_changed", callable_mp(this, &StudioEditor::_layouts_changed));
-	title_right_container->add_child(pages_bar);
-	title_right_container->move_child(pages_bar, 0);
-	pages_bar->set_current_page(EditorSettings::get_singleton()->get_project_metadata("studio", "current_page", String()));
+	String config_path;
+	String current_page;
+	String context_page;
+	PackedStringArray pages;
 
-	set_process_shortcut_input(true);
-}
+	Ref<ButtonGroup> button_group;
+	LocalVector<Button *> page_buttons;
+	Button *add_button = nullptr;
+	PopupMenu *context_menu = nullptr;
 
-void StudioEditor::notify_layouts_changed() {
-	if (pages_bar) {
-		pages_bar->refresh();
-	}
-}
+	ConfirmationDialog *name_dialog = nullptr;
+	LineEdit *name_edit = nullptr;
+	Label *name_error = nullptr;
+	NameDialogMode name_dialog_mode = NAME_DIALOG_NEW;
 
-void StudioEditor::_layouts_changed() {
-	emit_signal(SNAME("layouts_changed"));
-}
+	Ref<ConfigFile> _load_config() const;
+	Error _save_config(const Ref<ConfigFile> &p_config);
+	void _layouts_changed();
 
-void StudioEditor::shortcut_input(const Ref<InputEvent> &p_event) {
-	Ref<InputEventKey> k = p_event;
-	if (k.is_null() || !k->is_pressed() || k->is_echo() || !pages_bar) {
-		return;
-	}
-	for (int i = 1; i <= PAGE_SHORTCUT_COUNT; i++) {
-		if (ED_IS_SHORTCUT(vformat("studio/page_%d", i), p_event)) {
-			pages_bar->switch_to_index(i - 1);
-			get_viewport()->set_input_as_handled();
-			return;
-		}
-	}
-}
+	void _page_button_pressed(const String &p_page);
+	void _page_button_gui_input(const Ref<InputEvent> &p_event, const String &p_page);
+	void _context_option(int p_option);
 
-void StudioEditor::_bind_methods() {
-	ADD_SIGNAL(MethodInfo("layouts_changed"));
-}
+	void _add_button_pressed();
+	void _popup_name_dialog(NameDialogMode p_mode, const String &p_initial);
+	void _name_text_changed(const String &p_text);
+	void _name_confirmed();
 
-StudioEditor::StudioEditor() {
-	singleton = this;
-	set_name("StudioEditor");
-}
+protected:
+	static void _bind_methods();
 
-StudioEditor::~StudioEditor() {
-	if (singleton == this) {
-		singleton = nullptr;
-	}
-}
+public:
+	void set_config_path(const String &p_path);
+	String get_config_path() const;
+
+	void refresh();
+
+	void set_current_page(const String &p_page);
+	String get_current_page() const;
+
+	void switch_to_page(const String &p_page);
+	void switch_to_index(int p_index);
+	Error save_current_layout_as(const String &p_page);
+	Error rename_page(const String &p_from, const String &p_to);
+	void delete_page(const String &p_page);
+
+	StudioPagesBar();
+};

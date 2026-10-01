@@ -36,22 +36,40 @@
 class Control;
 class EditorBottomPanel;
 class EditorTitleBar;
+class StudioPagesBar;
 
 // Root of the Studio editor extensions. Owned by EditorNode; everything Studio adds
 // to the editor UI is created and wired from here so upstream files only need one hook.
 class StudioEditor : public Node {
 	GDCLASS(StudioEditor, Node);
 
+	static constexpr int PAGE_SHORTCUT_COUNT = 9;
+
 	static inline StudioEditor *singleton = nullptr;
 
 	EditorTitleBar *title_bar = nullptr;
 	Control *title_right_container = nullptr;
 	EditorBottomPanel *bottom_panel = nullptr;
+	StudioPagesBar *pages_bar = nullptr;
+
+	void _layouts_changed();
+
+protected:
+	static void _bind_methods();
+	virtual void shortcut_input(const Ref<InputEvent> &p_event) override;
 
 public:
 	static StudioEditor *get_singleton() { return singleton; }
 
+	// Registers Studio editor settings and shortcuts. Requires EditorSettings.
+	static void register_settings();
+
 	void setup(EditorTitleBar *p_title_bar, Control *p_title_right_container, EditorBottomPanel *p_bottom_panel);
+
+	// Called by EditorNode when the stock "Editor Layout" menu changed the layouts file.
+	void notify_layouts_changed();
+
+	StudioPagesBar *get_pages_bar() const { return pages_bar; }
 
 	StudioEditor();
 	~StudioEditor();
