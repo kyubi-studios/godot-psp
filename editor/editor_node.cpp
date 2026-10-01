@@ -144,6 +144,7 @@
 #include "editor/settings/project_settings_editor.h"
 #include "editor/shader/editor_native_shader_source_visualizer.h"
 #include "editor/shader/text_shader_editor.h"
+#include "editor/studio/studio_editor.h" // STUDIO: scaffold
 #include "editor/themes/editor_color_map.h"
 #include "editor/themes/editor_scale.h"
 #include "editor/themes/editor_theme_manager.h"
@@ -9244,6 +9245,11 @@ EditorNode::EditorNode() {
 	editor_dock_manager->register_dock_slot(bottom_panel);
 	center_split->add_child(bottom_panel);
 	center_split->set_dragger_visibility(SplitContainer::DRAGGER_HIDDEN);
+
+	// STUDIO: scaffold
+	studio_editor = memnew(StudioEditor);
+	add_child(studio_editor);
+	studio_editor->setup(title_bar, right_menu_hb, bottom_panel);
 
 	log = memnew(EditorLog);
 	editor_dock_manager->add_dock(log);

@@ -73,6 +73,7 @@ class DynamicFontImportSettingsDialog;
 class EditorAbout;
 class EditorBuildProfileManager;
 class EditorBottomPanel;
+class StudioEditor; // STUDIO: scaffold
 class EditorCommandPalette;
 class EditorDockManager;
 class EditorExport;
@@ -430,6 +431,7 @@ private:
 	Callable palette_file_selected_callback;
 
 	EditorBottomPanel *bottom_panel = nullptr;
+	StudioEditor *studio_editor = nullptr; // STUDIO: scaffold
 
 	Tree *disk_changed_list = nullptr;
 	LocalVector<String> disk_changed_scenes;
