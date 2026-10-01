@@ -39,6 +39,7 @@ TEST_FORCE_LINK(test_studio_scene_preview)
 #include "editor/studio/studio_scene_preview.h"
 #include "scene/2d/node_2d.h"
 #include "scene/3d/node_3d.h"
+#include "scene/main/viewport.h"
 #include "tests/test_tools.h"
 #include "tests/test_utils.h"
 
@@ -161,6 +162,37 @@ TEST_CASE("[Editor][Studio] Previewing a missing or broken file shows an error")
 	CHECK_FALSE(preview->get_error().is_empty());
 	CHECK(preview->get_preview_root() == nullptr);
 	memdelete(preview);
+}
+
+TEST_CASE("[Editor][Studio] 2D previews do not render the 3D default sky") {
+	StudioScenePreview *preview = memnew(StudioScenePreview);
+	preview->set_scene_path(write_scene("studio_preview_2d.tscn", SCENE_2D));
+	preview->refresh();
+	CHECK(preview->get_preview_viewport()->is_3d_disabled());
+	preview->set_scene_path(write_scene("studio_preview_3d.tscn", SCENE_3D));
+	preview->refresh();
+	CHECK_FALSE(preview->get_preview_viewport()->is_3d_disabled());
+	memdelete(preview);
+}
+
+TEST_CASE("[Editor][Studio] A plain Node root with 3D children is previewed as 3D") {
+	StudioScenePreview *preview = memnew(StudioScenePreview);
+	preview->set_scene_path(write_scene("studio_preview_node_root.tscn", "[gd_scene format=3]\n\n[node name=\"Root\" type=\"Node\"]\n\n[node name=\"Box\" type=\"CSGBox3D\" parent=\".\"]\n"));
+	preview->refresh();
+	REQUIRE(preview->get_preview_root() != nullptr);
+	CHECK(preview->is_3d());
+	memdelete(preview);
+}
+
+TEST_CASE("[Editor][Studio] Scene dependencies are found through instanced scenes") {
+	const String enemy = write_scene("studio_dep_enemy.tscn", "[gd_scene format=3]\n\n[node name=\"Enemy\" type=\"Node3D\"]\n");
+	const String squad = write_scene("studio_dep_squad.tscn", vformat("[gd_scene format=3]\n\n[ext_resource type=\"PackedScene\" path=\"%s\" id=\"1\"]\n\n[node name=\"Squad\" type=\"Node3D\"]\n\n[node name=\"E\" parent=\".\" instance=ExtResource(\"1\")]\n", enemy));
+	const String level = write_scene("studio_dep_level.tscn", vformat("[gd_scene format=3]\n\n[ext_resource type=\"PackedScene\" path=\"%s\" id=\"1\"]\n\n[node name=\"Level\" type=\"Node3D\"]\n\n[node name=\"S\" parent=\".\" instance=ExtResource(\"1\")]\n", squad));
+	const String other = write_scene("studio_dep_other.tscn", "[gd_scene format=3]\n\n[node name=\"Other\" type=\"Node3D\"]\n");
+	CHECK(StudioScenePreview::depends_on(level, squad));
+	CHECK(StudioScenePreview::depends_on(level, enemy));
+	CHECK_FALSE(StudioScenePreview::depends_on(level, other));
+	CHECK_FALSE(StudioScenePreview::depends_on(enemy, level));
 }
 
 } // namespace TestStudioScenePreview

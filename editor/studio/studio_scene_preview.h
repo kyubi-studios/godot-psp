@@ -117,6 +117,10 @@ public:
 	String get_error() const { return error; }
 
 	VBoxContainer *get_main_container() const { return main_vb; }
+	SubViewport *get_preview_viewport() const { return viewport; }
+
+	// True when p_scene instances or otherwise depends on p_dependency, directly or indirectly.
+	static bool depends_on(const String &p_scene, const String &p_dependency);
 
 	StudioScenePreview();
 };

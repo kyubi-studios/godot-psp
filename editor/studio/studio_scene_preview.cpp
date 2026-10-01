@@ -32,6 +32,8 @@
 #include "studio_scene_preview.h"
 
 #include "core/io/file_access.h"
+#include "core/io/resource_uid.h"
+#include "core/templates/hash_set.h"
 #include "core/io/resource_loader.h"
 #include "core/object/callable_mp.h"
 #include "scene/2d/node_2d.h"
@@ -171,6 +173,38 @@ PackedStringArray StudioScenePreview::picker_paths(const PackedStringArray &p_op
 	return result;
 }
 
+// Entries look like "uid://...::Type::fallback/path" or "res://path"; return the resource path.
+static String _dependency_path(const String &p_entry) {
+	const Vector<String> parts = p_entry.split("::");
+	String path = parts.is_empty() ? p_entry : parts[0];
+	if (path.begins_with("uid://")) {
+		const String resolved = ResourceUID::ensure_path(path);
+		path = resolved.begins_with("uid://") && parts.size() > 2 ? parts[2] : resolved;
+	}
+	return path;
+}
+
+static bool _depends_on(const String &p_scene, const String &p_dependency, HashSet<String> &r_visited) {
+	if (r_visited.has(p_scene)) {
+		return false;
+	}
+	r_visited.insert(p_scene);
+	List<String> dependencies;
+	ResourceLoader::get_dependencies(p_scene, &dependencies);
+	for (const String &entry : dependencies) {
+		const String path = _dependency_path(entry);
+		if (path == p_dependency || _depends_on(path, p_dependency, r_visited)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool StudioScenePreview::depends_on(const String &p_scene, const String &p_dependency) {
+	HashSet<String> visited;
+	return _depends_on(p_scene, p_dependency, visited);
+}
+
 void StudioScenePreview::set_scene_path(const String &p_path) {
 	scene_path = p_path;
 	if (EditorSettings::get_singleton() && EditorNode::get_singleton()) {
@@ -221,7 +255,8 @@ void StudioScenePreview::_open_in_editor() {
 }
 
 void StudioScenePreview::_scene_saved(const String &p_path) {
-	if (auto_refresh->is_pressed() && p_path == scene_path) {
+	// Also refresh when a scene instanced by the previewed one is saved ("edit the enemy, see the level").
+	if (auto_refresh->is_pressed() && !scene_path.is_empty() && (p_path == scene_path || depends_on(scene_path, p_path))) {
 		refresh();
 	}
 }
@@ -272,7 +307,10 @@ void StudioScenePreview::refresh() {
 	viewport->add_child(preview_root);
 	_show_message(String());
 
-	preview_is_3d = Object::cast_to<Node3D>(preview_root) != nullptr;
+	// A plain Node root with 3D children is a 3D scene too.
+	preview_is_3d = Object::cast_to<Node3D>(preview_root) != nullptr || (!Object::cast_to<CanvasItem>(preview_root) && _has_node_of_type(preview_root, SNAME("Node3D")));
+	// 2D scenes must not render the default 3D sky behind the canvas.
+	viewport->set_disable_3d(!preview_is_3d);
 	if (preview_is_3d) {
 		const bool has_light = _has_node_of_type(preview_root, SNAME("Light3D"));
 		const bool has_env = _has_node_of_type(preview_root, SNAME("WorldEnvironment"));
@@ -282,6 +320,9 @@ void StudioScenePreview::refresh() {
 		camera->set_current(true);
 	} else {
 		default_lighting->set_visible(false);
+		// The default environment would override a 2D scene's own WorldEnvironment (canvas glow).
+		default_lighting->get_child(1)->set("environment", Variant());
+		camera->clear_current();
 	}
 	zoom = 1.0;
 	pan = Vector2();
